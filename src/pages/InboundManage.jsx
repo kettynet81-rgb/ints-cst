@@ -4,7 +4,26 @@ import { db } from '../firebase'
 import { ITEMS } from '../data/items'
 
 const ITEM_MAP  = Object.fromEntries(ITEMS.map(i => [i.code, i.name]))
+
 const today = () => new Date().toISOString().slice(0,10)
+
+// 날짜 단축 입력 파싱: "7/5" "75" "0705" → "2026-07-05"
+const parseDate = (v) => {
+  const year = new Date().getFullYear()
+  v = v.trim().replace(/[.]/g, '/')
+  // M/D 형식
+  const slash = v.match(/^(\d{1,2})\/(\d{1,2})$/)
+  if (slash) {
+    const m = slash[1].padStart(2,'0'), d = slash[2].padStart(2,'0')
+    return `${year}-${m}-${d}`
+  }
+  // MMDD 형식
+  const mmdd = v.match(/^(\d{2})(\d{2})$/)
+  if (mmdd) return `${year}-${mmdd[1]}-${mmdd[2]}`
+  // 이미 올바른 형식
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v
+  return v
+}
 
 export default function InboundManage({ transactions }) {
   const inbounds = transactions
@@ -27,7 +46,8 @@ export default function InboundManage({ transactions }) {
 
   const setF = (k, v) => setForm(f => ({...f, [k]: v}))
 
-  const foundItem = ITEMS.find(i => i.code.toUpperCase() === form.itemCode.toUpperCase())
+  const codeUpper = form.itemCode.trim().toUpperCase()
+  const foundItem = ITEMS.find(i => i.code === codeUpper) || ITEMS.find(i => i.code === 'A'+codeUpper)
 
   const handleSave = async () => {
     if (!form.date || !foundItem || !form.quantity || Number(form.quantity) <= 0) return
@@ -116,8 +136,9 @@ export default function InboundManage({ transactions }) {
             {mode === 'text' ? (
               <input ref={dateRef} type="text" value={form.date}
                 onChange={e => setF('date', e.target.value)}
-                onKeyDown={e => handleKeyDown(e, codeRef)}
-                placeholder="2026-07-05"
+                onBlur={e => setF('date', parseDate(e.target.value))}
+                onKeyDown={e => { if(e.key==='Enter'){setF('date',parseDate(form.date));codeRef.current?.focus()} }}
+                placeholder="7/5 또는 0705"
                 style={{...S.inp, width:130}}
               />
             ) : (
@@ -139,7 +160,8 @@ export default function InboundManage({ transactions }) {
               <div style={{position:'relative'}}>
                 <input ref={codeRef} type="text" value={form.itemCode}
                   onChange={e => handleCodeChange(e.target.value)}
-                  onKeyDown={e => handleKeyDown(e, foundItem ? qtyRef : null)}
+                  onKeyDown={e => { if(e.key==='Enter'||e.key==='Tab'){e.preventDefault();finalizeCode(form.itemCode,true)} }}
+                onBlur={e => finalizeCode(form.itemCode,false)}
                   placeholder="A1, A8, A16 ..."
                   style={{...S.inp, width:160, textTransform:'uppercase',
                     borderColor: foundItem ? '#16a34a' : form.itemCode ? '#dc2626' : '#e2e8f0'}}
@@ -185,7 +207,7 @@ export default function InboundManage({ transactions }) {
             <input ref={memoRef} type="text" value={form.memo}
               onChange={e => setF('memo', e.target.value)}
               onKeyDown={e => handleKeyDown(e, null)}
-              placeholder="좌 150 / 우 150 등"
+              placeholder="메모 입력"
               style={{...S.inp, flex:1}}
             />
           </div>
