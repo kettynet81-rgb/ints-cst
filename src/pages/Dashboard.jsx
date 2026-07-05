@@ -4,15 +4,17 @@ import { ITEMS } from '../data/items'
 export default function Dashboard({ transactions, stockMap }) {
   const [simQty,  setSimQty]  = useState('')
   const [hoverRow, setHoverRow] = useState(null)
-  const [baseQty, setBaseQty] = useState('112')
+  const [baseQty,  setBaseQty]  = useState('112')
+  const [lowQty,   setLowQty]   = useState('80')
 
   const sim  = Number(simQty)
   const base = Number(baseQty) || 0
+  const low  = Number(lowQty)  || 80
 
   const itemStats = useMemo(() => ITEMS.map(item => {
     const stock      = stockMap[item.code] || 0
     const assemblable = Math.floor(stock / item.needPerSet)
-    const status     = stock === 0 ? 'empty' : assemblable < 80 ? 'low' : 'ok'
+    const status     = stock === 0 ? 'empty' : assemblable < low ? 'low' : 'ok'
     const surplus    = stock - item.needPerSet * base
     const required   = sim > 0 ? item.needPerSet * sim : 0
     const shortage   = sim > 0 ? Math.max(0, required - stock) : 0
@@ -34,7 +36,7 @@ export default function Dashboard({ transactions, stockMap }) {
         <div style={S.div}/>
         <SumItem label="재고없음" value={`${emptyCount}품목`} color="#dc2626"/>
         <div style={S.div}/>
-        <SumItem label="발주필요 (80SET↓)" value={`${lowCount}품목`} color="#d97706"/>
+        <SumItem label="발주필요 ({lowQty}SET↓)" value={`${lowCount}품목`} color="#d97706"/>
         <div style={S.div}/>
         <SumItem label="전체 품목" value={`${ITEMS.length}개`} color="#374151"/>
       </div>
@@ -49,6 +51,14 @@ export default function Dashboard({ transactions, stockMap }) {
             <div style={{fontSize:11,color:'#94a3b8',marginTop:1}}>C-CST 원부자재 A1 ~ A29</div>
           </div>
           <div style={{display:'flex',alignItems:'center',gap:10}}>
+            {/* 발주기준 */}
+            <div style={{display:'flex',alignItems:'center',gap:5}}>
+              <span style={{fontSize:11,color:'#94a3b8'}}>발주기준</span>
+              <input type="number" min="1" value={lowQty} onChange={e=>setLowQty(e.target.value)}
+                style={{width:50,padding:'3px 6px',border:'1.5px solid #fde68a',borderRadius:5,fontSize:13,fontWeight:700,textAlign:'center',fontFamily:'inherit',outline:'none'}}/>
+              <span style={{fontSize:11,color:'#94a3b8'}}>SET</span>
+            </div>
+            <div style={S.div}/>
             {/* 기준 SET */}
             <div style={{display:'flex',alignItems:'center',gap:5}}>
               <span style={{fontSize:11,color:'#94a3b8'}}>기준 SET</span>
