@@ -11,6 +11,7 @@ import AdminPage from './pages/AdminPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import PendingPage from './pages/PendingPage'
+import PrintModal from './components/PrintModal'
 
 function MainApp() {
   const { currentUser, userRole, userData, logout } = useAuth()
