@@ -114,6 +114,10 @@ function MainApp() {
           <div style={{display:'flex',alignItems:'center',gap:12}}>
             <span style={{fontSize:12,color:'#64748b'}}>{dateStr}</span>
             <div style={{width:1,height:16,background:'#e2e8f0'}}/>
+            <button onClick={()=>setShowPrint(true)}
+              style={{background:'none',border:'1px solid #e2e8f0',borderRadius:6,padding:'4px 10px',cursor:'pointer',fontSize:12,color:'#64748b',display:'flex',alignItems:'center',gap:4}}>
+              🖨 인쇄
+            </button>
             <button onClick={()=>window.location.reload()}
               style={{background:'none',border:'1px solid #e2e8f0',borderRadius:6,padding:'4px 10px',cursor:'pointer',fontSize:12,color:'#64748b',display:'flex',alignItems:'center',gap:4}}>
               ↻ 새로고침
@@ -139,6 +143,7 @@ function MainApp() {
       </div>
 
       {toast && <div style={S.toast}>✓ {toast}</div>}
+      {showPrint && <PrintModal transactions={transactions} stockMap={stockMap} onClose={()=>setShowPrint(false)} />}
     </div>
   )
 }
