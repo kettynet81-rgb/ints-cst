@@ -38,7 +38,7 @@ export default function Dashboard({ transactions, stockMap }) {
         <div style={S.div}/>
         <SumItem label="재고없음" value={`${emptyCount}품목`} color="#dc2626"/>
         <div style={S.div}/>
-        <SumItem label="`발주필요 (${lowQty}SET↓)`" value={`${lowCount}품목`} color="#d97706"/>
+        <SumItem label={`발주필요 (${lowQty}SET↓)`} value={`${lowCount}품목`} color="#d97706"/>
       </div>
 
       {/* 테이블 카드 */}
