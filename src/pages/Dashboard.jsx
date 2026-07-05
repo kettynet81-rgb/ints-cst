@@ -83,7 +83,7 @@ export default function Dashboard({ transactions, stockMap }) {
           <table style={{width:'100%',borderCollapse:'collapse',tableLayout:'fixed'}}>
             <colgroup>
               <col style={{width:55}}/>
-              <col/>
+              <col style={{width:220}}/>
               <col style={{width:48}}/>
               <col style={{width:82}}/>
               <col style={{width:80}}/>
