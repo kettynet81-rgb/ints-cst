@@ -22,7 +22,7 @@ export default function InboundManage({ transactions }) {
     .filter(t => t.type === '입고')
     .sort((a,b) => b.date.localeCompare(a.date) || (b.createdAt?.seconds||0)-(a.createdAt?.seconds||0))
 
-  const [form, setForm]     = useState({ date:today(), itemCode:'', quantity:'', memo:'' })
+  const [form, setForm]     = useState({ date:'', itemCode:'', quantity:'', memo:'' })
   const [saving, setSaving] = useState(false)
   const [saved,  setSaved]  = useState(false)
   const [editId, setEditId] = useState(null)
@@ -57,7 +57,7 @@ export default function InboundManage({ transactions }) {
       quantity:Number(form.quantity), memo:form.memo.trim(),
       createdAt:serverTimestamp(),
     })
-    setForm({ date:today(), itemCode:'', quantity:'', memo:'' })
+    setForm({ date:'', itemCode:'', quantity:'', memo:'' })
     setSaving(false); setSaved(true)
     setTimeout(() => { setSaved(false); codeRef.current?.focus() }, 1500)
   }
