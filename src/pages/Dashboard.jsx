@@ -12,8 +12,8 @@ export default function Dashboard({ transactions, stockMap }) {
   const itemStats = useMemo(() => ITEMS.map(item => {
     const stock      = stockMap[item.code] || 0
     const assemblable = Math.floor(stock / item.needPerSet)
-    const status     = stock === 0 ? 'empty' : surplus < 0 ? 'low' : 'ok'
     const surplus    = stock - item.needPerSet * base
+    const status     = stock === 0 ? 'empty' : surplus < 0 ? 'low' : 'ok'
     const required   = sim > 0 ? item.needPerSet * sim : 0
     const shortage   = sim > 0 ? Math.max(0, required - stock) : 0
     const simStatus  = sim > 0 ? (shortage > 0 ? 'short' : 'ok') : null
