@@ -38,17 +38,8 @@ export default function Dashboard({ transactions, stockMap }) {
         <div style={S.sumDiv}/>
         <SumItem label="전체 품목" value={`${ITEMS.length}개`} color="#374151" />
 
-        {/* 기준 SET + 시뮬레이터 */}
-        <div style={{marginLeft:'auto', display:'flex', alignItems:'center', gap:16}}>
-          {/* 기준 SET */}
-          <div style={{display:'flex',alignItems:'center',gap:6}}>
-            <span style={{fontSize:11,color:'#94a3b8',whiteSpace:'nowrap'}}>기준 SET</span>
-            <input type="number" min="1" value={baseQty}
-              onChange={e=>setBaseQty(e.target.value)}
-              style={{width:65,padding:'4px 8px',border:'2px solid #e2e8f0',borderRadius:6,fontSize:13,fontWeight:700,textAlign:'center',fontFamily:'inherit',outline:'none'}}
-            />
-          </div>
-          <div style={{width:1,height:24,background:'#e2e8f0'}}/>
+        {/* 시뮬레이터 */}
+        <div style={{marginLeft:'auto', display:'flex', alignItems:'center', gap:10}}>
           <span style={{fontSize:12, color:'#64748b', whiteSpace:'nowrap'}}>조립 시뮬레이션</span>
           <div style={S.simInputWrap}>
             <input
@@ -77,17 +68,37 @@ export default function Dashboard({ transactions, stockMap }) {
             <div style={S.cardTitle}>부품 재고 현황</div>
             <div style={S.cardSub}>C-CST 원부자재 A1 ~ A29</div>
           </div>
-          <div style={{display:'flex',gap:10,alignItems:'center'}}>
+          <div style={{display:'flex',gap:12,alignItems:'center'}}>
+            {/* 기준 SET */}
+            <div style={{display:'flex',alignItems:'center',gap:5}}>
+              <span style={{fontSize:11,color:'#94a3b8',whiteSpace:'nowrap'}}>기준 SET</span>
+              <input type="number" min="1" value={baseQty}
+                onChange={e=>setBaseQty(e.target.value)}
+                style={{width:60,padding:'3px 7px',border:'1.5px solid #e2e8f0',borderRadius:5,fontSize:13,fontWeight:700,textAlign:'center',fontFamily:'inherit',outline:'none'}}
+              />
+            </div>
+            <div style={{width:1,height:18,background:'#e2e8f0'}}/>
+            {/* 조립 시뮬레이션 */}
+            <div style={{display:'flex',alignItems:'center',gap:5}}>
+              <span style={{fontSize:11,color:'#94a3b8',whiteSpace:'nowrap'}}>조립 시뮬레이션</span>
+              <input type="number" min="1" value={simQty}
+                onChange={e=>setSimQty(e.target.value)}
+                placeholder="SET"
+                style={{width:60,padding:'3px 7px',border:'1.5px solid #3b82f6',borderRadius:5,fontSize:13,fontWeight:700,textAlign:'center',fontFamily:'inherit',outline:'none'}}
+              />
+            </div>
+            {sim > 0 && (
+              <>
+                {shortCount===0
+                  ? <span style={S.simOk}>✔ 충족</span>
+                  : <span style={S.simNg}>✘ {shortCount}품목</span>}
+                <button style={S.simClear} onClick={()=>setSimQty('')}>✕</button>
+              </>
+            )}
+            <div style={{width:1,height:18,background:'#e2e8f0'}}/>
             {sim > 0
-              ? <>
-                  <LegendDot color="#dc2626" label="부족"/>
-                  <LegendDot color="#16a34a" label="충족"/>
-                </>
-              : <>
-                  <LegendDot color="#dc2626" label="재고없음"/>
-                  <LegendDot color="#d97706" label="발주필요"/>
-                  <LegendDot color="#16a34a" label="정상"/>
-                </>}
+              ? <><LegendDot color="#dc2626" label="부족"/><LegendDot color="#16a34a" label="충족"/></>
+              : <><LegendDot color="#dc2626" label="재고없음"/><LegendDot color="#d97706" label="발주필요"/><LegendDot color="#16a34a" label="정상"/></>}
           </div>
         </div>
 
