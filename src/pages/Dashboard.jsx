@@ -84,16 +84,6 @@ export default function Dashboard({ transactions, stockMap }) {
 
         <div style={S.tableWrap}>
           <table style={S.table}>
-            <colgroup>
-              <col style={{width:55}} />
-              <col />
-              <col style={{width:50}} />
-              <col style={{width:80}} />
-              {sim > 0
-                ? <><col style={{width:95}}/><col style={{width:85}}/><col style={{width:75}}/></>
-                : <><col style={{width:80}}/><col style={{width:70}}/><col style={{width:90}}/></>
-              }
-            </colgroup>
             <thead>
               <tr>
                 <th style={{...S.th, textAlign:'center', width:60}}>코드</th>
