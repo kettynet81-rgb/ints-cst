@@ -38,27 +38,7 @@ export default function Dashboard({ transactions, stockMap }) {
         <div style={S.sumDiv}/>
         <SumItem label="전체 품목" value={`${ITEMS.length}개`} color="#374151" />
 
-        {/* 시뮬레이터 */}
-        <div style={{marginLeft:'auto', display:'flex', alignItems:'center', gap:10}}>
-          <span style={{fontSize:12, color:'#64748b', whiteSpace:'nowrap'}}>조립 시뮬레이션</span>
-          <div style={S.simInputWrap}>
-            <input
-              type="number" min="1" value={simQty}
-              onChange={e => setSimQty(e.target.value)}
-              placeholder="SET 수"
-              style={S.simInput}
-            />
-            <span style={{fontSize:12, color:'#64748b', marginLeft:4}}>SET</span>
-          </div>
-          {sim > 0 && (
-            <>
-              {shortCount === 0
-                ? <span style={S.simOk}>✔ 전 품목 충족</span>
-                : <span style={S.simNg}>✘ {shortCount}품목 부족</span>}
-              <button style={S.simClear} onClick={() => setSimQty('')}>✕</button>
-            </>
-          )}
-        </div>
+
       </div>
 
       {/* 재고 테이블 */}
@@ -107,7 +87,7 @@ export default function Dashboard({ transactions, stockMap }) {
             <thead>
               <tr>
                 <th style={{...S.th, textAlign:'center', width:60}}>코드</th>
-                <th style={{...S.th, textAlign:'left'}}>품목명</th>
+                <th style={{...S.th, textAlign:'left', width:'auto'}}>품목명</th>
                 <th style={{...S.th, textAlign:'center', width:70}}>필요</th>
                 <th style={{...S.th, textAlign:'right', width:80}}>현재고</th>
                 {sim > 0 ? (
@@ -242,8 +222,6 @@ const S = {
   summaryBar: {background:'#fff',borderRadius:8,border:'1px solid #e2e8f0',padding:'8px 16px',display:'flex',alignItems:'center'},
   sumDiv:     {width:1,height:32,background:'#e2e8f0',flexShrink:0},
 
-  simInputWrap: {display:'flex',alignItems:'center',gap:4},
-  simInput: {width:70,padding:'4px 8px',border:'2px solid #3b82f6',borderRadius:6,fontSize:13,fontWeight:700,textAlign:'center',fontFamily:'inherit',outline:'none',color:'#1e293b'},
   simOk:    {fontSize:12,fontWeight:700,color:'#16a34a',background:'#dcfce7',padding:'4px 12px',borderRadius:20},
   simNg:    {fontSize:12,fontWeight:700,color:'#dc2626',background:'#fee2e2',padding:'4px 12px',borderRadius:20},
   simClear: {background:'none',border:'none',color:'#94a3b8',cursor:'pointer',fontSize:16,padding:'0 4px'},
@@ -254,7 +232,7 @@ const S = {
   cardSub:  {fontSize:11,color:'#94a3b8',marginTop:2},
 
   tableWrap:{overflowY:'auto',flex:1},
-  table:    {width:'100%',borderCollapse:'collapse'},
+  table:    {width:'100%',borderCollapse:'collapse',tableLayout:'fixed'},
   th:       {background:'#1e293b',color:'#94a3b8',padding:'8px 10px',fontSize:11,fontWeight:700,position:'sticky',top:0,letterSpacing:0.3,whiteSpace:'nowrap'},
   td:       {padding:'8px 10px',fontSize:12,color:'#1e293b',borderBottom:'1px solid #f1f5f9',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:0},
   codeTag:  {background:'#eff6ff',color:'#1e40af',padding:'1px 7px',borderRadius:4,fontSize:11,fontWeight:800},
