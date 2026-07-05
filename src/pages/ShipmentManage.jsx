@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { collection, addDoc, deleteDoc, doc, updateDoc, writeBatch, serverTimestamp } from 'firebase/firestore'
+import { collection, addDoc, deleteDoc, doc, updateDoc, writeBatch, serverTimestamp, getDocs, query, where } from 'firebase/firestore'
 import { db } from '../firebase'
 import { ITEMS } from '../data/items'
 
@@ -101,6 +101,35 @@ function ProductShipment({ transactions, stockMap }) {
     setConf(null)
   }
 
+  // 확정 취소 → 차감된 재고 복구
+  const cancelShipment = async (plan) => {
+    const ok = window.confirm(`출하 확정을 취소하시겠습니까?\n확정 시 차감된 재고가 복구됩니다.`)
+    if (!ok) return
+    setConf(plan.id)
+    const batch = writeBatch(db)
+    // 이 출하로 생성된 출고 기록 삭제 (재고 복구)
+    const relatedOuts = transactions.filter(t => t.type==='출고' && t.shipmentId===plan.shipmentId)
+    relatedOuts.forEach(t => batch.delete(doc(db,'transactions',t.id)))
+    // 계획 상태 복구
+    batch.update(doc(db,'transactions',plan.id), { status:'planned' })
+    await batch.commit()
+    setConf(null)
+  }
+
+  // 계획 인라인 수정
+  const [editPlanId, setEditPlanId] = useState(null)
+  const [editPlan, setEditPlan]     = useState({})
+
+  const savePlanEdit = async () => {
+    await updateDoc(doc(db,'transactions',editPlanId), {
+      date: editPlan.date,
+      setQty: Number(editPlan.setQty),
+      quantity: Number(editPlan.setQty),
+      memo: editPlan.memo,
+    })
+    setEditPlanId(null)
+  }
+
   const deletePlan = async (id) => {
     if (!window.confirm('출하 계획을 삭제하시겠습니까?')) return
     setDel(id); await deleteDoc(doc(db, 'transactions', id)); setDel(null)
@@ -188,27 +217,47 @@ function ProductShipment({ transactions, stockMap }) {
                 const bg = confirmed?'#f0fdf4':i%2===0?'#f8fafc':'#fff'
                 return (
                   <tr key={plan.id} style={{background:bg}}>
-                    <td style={{...S.td,fontWeight:600}}>{plan.date}</td>
+                    <td style={{...S.td,fontWeight:600}}>
+                      {editPlanId===plan.id
+                        ? <input type="text" value={editPlan.date} onChange={e=>setEditPlan({...editPlan,date:e.target.value})} style={{...S.tdInp,width:110}}/>
+                        : plan.date}
+                    </td>
                     <td style={{...S.td,textAlign:'right',fontWeight:800,fontSize:14,color:'#065f46'}}>
-                      {plan.setQty?.toLocaleString()} SET
+                      {editPlanId===plan.id
+                        ? <input type="number" value={editPlan.setQty} onChange={e=>setEditPlan({...editPlan,setQty:e.target.value})} style={{...S.tdInp,width:70,textAlign:'right'}}/>
+                        : <>{plan.setQty?.toLocaleString()} SET</>}
                     </td>
                     <td style={S.td}>
                       {confirmed ? <span style={S.ok}>✔ 확정완료</span>
                         : ok ? <span style={S.ok}>✔ 가능</span>
                         : <span style={S.ng}>✘ {getShort(plan.setQty).length}품목 부족</span>}
                     </td>
-                    <td style={{...S.td,fontSize:12,color:'#64748b'}}>{plan.memo||''}</td>
+                    <td style={{...S.td,fontSize:12,color:'#64748b'}}>
+                      {editPlanId===plan.id
+                        ? <input type="text" value={editPlan.memo} onChange={e=>setEditPlan({...editPlan,memo:e.target.value})} style={S.tdInp}/>
+                        : plan.memo||''}
+                    </td>
                     <td style={S.td}>
                       {confirmed
                         ? <span style={S.badgeConfirm}>확정</span>
                         : <span style={S.badgePlan}>계획</span>}
                     </td>
                     <td style={S.td}>
-                      {!confirmed && (
+                      {confirmed ? (
+                        <button style={S.cancelBtn} onClick={()=>cancelShipment(plan)} disabled={confirming===plan.id}>
+                          {confirming===plan.id?'처리중...':'확정 취소'}
+                        </button>
+                      ) : editPlanId===plan.id ? (
+                        <div style={{display:'flex',gap:4}}>
+                          <button style={S.smSave} onClick={savePlanEdit}>저장</button>
+                          <button style={S.smCancel} onClick={()=>setEditPlanId(null)}>취소</button>
+                        </div>
+                      ) : (
                         <div style={{display:'flex',gap:4}}>
                           <button style={S.confirmBtn} onClick={()=>confirmShipment(plan)} disabled={confirming===plan.id}>
                             {confirming===plan.id?'처리중...':'출하 확정'}
                           </button>
+                          <button style={S.smSave} onClick={()=>{setEditPlanId(plan.id);setEditPlan({date:plan.date,setQty:plan.setQty,memo:plan.memo||''})}}>수정</button>
                           <button style={S.smDel} onClick={()=>deletePlan(plan.id)} disabled={deleting===plan.id}>삭제</button>
                         </div>
                       )}
@@ -425,6 +474,9 @@ const S = {
   badgePlan:    {background:'#dbeafe',color:'#1e40af',padding:'2px 9px',borderRadius:4,fontSize:11,fontWeight:700},
   badgeConfirm: {background:'#dcfce7',color:'#16a34a',padding:'2px 9px',borderRadius:4,fontSize:11,fontWeight:700},
   confirmBtn:   {padding:'4px 12px',background:'#065f46',color:'#fff',border:'none',borderRadius:4,cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:'inherit'},
+  cancelBtn:    {padding:'4px 12px',background:'#7c3aed',color:'#fff',border:'none',borderRadius:4,cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:'inherit'},
+  tdInp:        {padding:'4px 7px',border:'1.5px solid #3b82f6',borderRadius:4,fontSize:12,fontFamily:'inherit',outline:'none',width:'100%'},
+  smSave:       {padding:'4px 10px',background:'#1e40af',color:'#fff',border:'none',borderRadius:4,cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:'inherit'},
   smSave:   {padding:'4px 10px',background:'#1e40af',color:'#fff',border:'none',borderRadius:4,cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:'inherit'},
   smCancel: {padding:'4px 9px',background:'#f1f5f9',color:'#475569',border:'none',borderRadius:4,cursor:'pointer',fontSize:11,fontFamily:'inherit'},
   smDel:    {padding:'4px 9px',background:'#fee2e2',color:'#dc2626',border:'none',borderRadius:4,cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:'inherit'},
