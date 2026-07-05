@@ -19,6 +19,7 @@ function MainApp() {
   const [loading, setLoading] = useState(true)
   const [sideCollapsed, setSideCollapsed] = useState(false)
   const [toast, setToast] = useState(null)
+  const [showPrint, setShowPrint] = useState(false)
 
   useEffect(() => {
     if (!currentUser) return
