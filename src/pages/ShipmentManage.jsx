@@ -47,7 +47,7 @@ function ProductShipment({ transactions, stockMap }) {
     .filter(t => t.type === '출하계획' && t.isHeader)
     .sort((a,b) => a.date.localeCompare(b.date))
 
-  const [form, setForm]       = useState({ date: today(), setQty:'', memo:'' })
+  const [form, setForm]       = useState({ date:'', setQty:'', memo:'' })
   const [saving, setSaving]   = useState(false)
   const [saved, setSaved]     = useState(false)
   const [confirming, setConf] = useState(null)
@@ -74,7 +74,7 @@ function ProductShipment({ transactions, stockMap }) {
       itemCode:'SET', itemName:'CST SET 출하', quantity: qty,
       createdAt: serverTimestamp(),
     })
-    setForm({ date: today(), setQty:'', memo:'' })
+    setForm({ date:'', setQty:'', memo:'' })
     setSaving(false); setSaved(true)
     setTimeout(() => { setSaved(false); qtyRef.current?.focus() }, 1500)
   }
@@ -291,7 +291,7 @@ function PartsOutbound({ transactions }) {
     .filter(t => t.type==='출고' && !t.shipmentId)
     .sort((a,b) => b.date.localeCompare(a.date)||(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0))
 
-  const [form, setForm]     = useState({ date:today(), itemCode:'', quantity:'', memo:'' })
+  const [form, setForm]     = useState({ date:'', itemCode:'', quantity:'', memo:'' })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved]   = useState(false)
   const [editId, setEditId] = useState(null)
@@ -322,7 +322,7 @@ function PartsOutbound({ transactions }) {
       quantity:Number(form.quantity), memo:form.memo.trim(),
       createdAt:serverTimestamp(),
     })
-    setForm({date:today(),itemCode:'',quantity:'',memo:''})
+    setForm({date:'',itemCode:'',quantity:'',memo:''})
     setSaving(false); setSaved(true)
     setTimeout(()=>{setSaved(false);codeRef.current?.focus()},1500)
   }
