@@ -111,7 +111,21 @@ tr:nth-child(even){background:#f8fafc}
 .t-orange{color:#d97706;font-weight:700}
 .gray{color:#666}
 @media print{@page{margin:10mm}}
-</style></head><body>
+</style>
+<style>
+.print-bar{position:fixed;top:0;left:0;right:0;background:#1e293b;padding:10px 20px;display:flex;gap:10px;align-items:center;z-index:999;box-shadow:0 2px 8px rgba(0,0,0,0.3)}
+.btn-print{padding:8px 22px;background:#3b82f6;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:700;font-family:inherit}
+.btn-close{padding:8px 16px;background:#475569;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-family:inherit}
+.tip{font-size:12px;color:#94a3b8}
+body{padding-top:54px}
+@media print{.print-bar{display:none}body{padding-top:0}}
+</style>
+</head><body>
+<div class="print-bar">
+  <button class="btn-print" onclick="window.print()">🖨 인쇄</button>
+  <button class="btn-close" onclick="window.close()">✕ 닫기</button>
+  <span class="tip">인쇄 버튼을 누르면 프린터 설정 창이 열립니다</span>
+</div>
 <div class="hd">
   <div><div class="logo">INTS</div><div class="co">㈜아이엔티에스 · C-CST 재고관리</div></div>
   <h2>${title}</h2>
@@ -119,12 +133,11 @@ tr:nth-child(even){background:#f8fafc}
 <table><thead>${headers}</thead><tbody>${rows}</tbody></table>
 </body></html>`
 
-    const w = window.open('', '_blank', 'width=1000,height=750')
+    const w = window.open('', '_blank', 'width=1050,height=780')
     if (!w) { alert('팝업이 차단되었습니다. 팝업 허용 후 다시 시도해주세요.'); return }
     w.document.write(html)
     w.document.close()
     w.focus()
-    setTimeout(() => w.print(), 500)
   }
 
   const cnt = type==='history' ? historyData.length : type==='shipment' ? shipData.length : null
