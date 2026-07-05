@@ -5,7 +5,7 @@ export default function History({ transactions }) {
   const [typeFilter, setTypeFilter] = useState('전체')
 
   const filtered = useMemo(() => {
-    return [...transactions]
+    return [...transactions].filter(t => t.type === '입고' || t.type === '출고')
       .sort((a,b) => {
         if (b.date !== a.date) return b.date.localeCompare(a.date)
         return (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0)
