@@ -51,7 +51,8 @@ export default function PrintModal({ transactions, stockMap, onClose }) {
     let title = ''
 
     if (type === 'stock') {
-      title = `부품 재고 현황 (기준 ${base}SET) — ${now}`
+      const printDate = dateFrom || now
+      title = `부품 재고 현황 (기준 ${base}SET) — ${printDate}`
       headers = `<tr><th>코드</th><th>품목명</th><th>필요수량</th><th>현재고</th><th>조립가능</th><th>과부족(${base}SET)</th><th>상태</th></tr>`
       rows = stockData.map(d => `
         <tr class="${d.status==='재고없음'?'bg-red':d.status==='발주필요'?'bg-yellow':''}">
@@ -66,14 +67,14 @@ export default function PrintModal({ transactions, stockMap, onClose }) {
 
     } else if (type === 'history') {
       title = `입출고 이력 (${dateFrom||'전체'} ~ ${dateTo||'전체'}) — ${now} · ${historyData.length}건`
-      headers = `<tr><th>날짜</th><th>구분</th><th>코드</th><th>품목명</th><th>수량(EA)</th><th>메모</th></tr>`
+      headers = `<tr><th style='width:90px'>날짜</th><th style='width:50px'>구분</th><th style='width:50px'>코드</th><th>품목명</th><th style='width:70px;text-align:left'>수량(EA)</th><th style='width:200px;text-align:left'>메모</th></tr>`
       rows = historyData.map(t => `
         <tr>
           <td class="c">${t.date}</td>
           <td class="c ${t.type==='입고'?'t-blue':'t-red'}">${t.type}</td>
           <td class="c b">${t.itemCode}</td>
           <td>${t.itemName}</td>
-          <td class="r b">${t.quantity.toLocaleString()}</td>
+          <td class="b">${t.quantity.toLocaleString()}</td>
           <td class="gray">${t.memo||''}</td>
         </tr>`).join('')
 
@@ -109,7 +110,7 @@ tr:nth-child(even){background:#f8fafc}
 .t-green{color:#16a34a;font-weight:700}
 .t-blue{color:#1e40af;font-weight:700}
 .t-orange{color:#d97706;font-weight:700}
-.gray{color:#666}
+.gray{color:#666}.b{font-weight:700}
 @media print{@page{margin:10mm}}
 </style>
 <style>
