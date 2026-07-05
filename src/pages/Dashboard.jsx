@@ -3,6 +3,7 @@ import { ITEMS } from '../data/items'
 
 export default function Dashboard({ transactions, stockMap }) {
   const [simQty,  setSimQty]  = useState('')
+  const [hoverRow, setHoverRow] = useState(null)
   const [baseQty, setBaseQty] = useState('112')
 
   const sim  = Number(simQty)
@@ -118,7 +119,10 @@ export default function Dashboard({ transactions, stockMap }) {
                 else bg = item.status==='empty'?'#fff5f5':item.status==='low'?'#fffdf0':i%2===0?'#f8fafc':'#fff'
 
                 return (
-                  <tr key={item.code} style={{background:bg}}>
+                  <tr key={item.code}
+                    style={{background: hoverRow===item.code ? '#dbeafe' : bg, transition:'background 0.1s'}}
+                    onMouseEnter={()=>setHoverRow(item.code)}
+                    onMouseLeave={()=>setHoverRow(null)}>
                     <td style={{...S.td,textAlign:'center'}}>
                       <span style={{background:'#eff6ff',color:'#1e40af',padding:'1px 7px',borderRadius:4,fontSize:11,fontWeight:800}}>{item.code}</span>
                     </td>
