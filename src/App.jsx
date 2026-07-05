@@ -10,6 +10,7 @@ import InboundManage from './pages/InboundManage'
 import ShipmentManage from './pages/ShipmentManage'
 import History from './pages/History'
 import AdminPage from './pages/AdminPage'
+import ShipmentCalendar from './pages/ShipmentCalendar'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import PendingPage from './pages/PendingPage'
@@ -123,7 +124,7 @@ function MainApp() {
         {/* 패널 */}
         {!sideCollapsed && sidePanel === 'cal' && (
           <div style={{overflowY:'auto',maxHeight:'52vh',flexShrink:0}}>
-            <SideCalendar transactions={transactions}/>
+            <SideCalendar transactions={transactions} onNavigate={setPage}/>
           </div>
         )}
         {!sideCollapsed && sidePanel === 'calc' && (
@@ -183,6 +184,7 @@ function MainApp() {
             : page==='inbound'   ? <InboundManage transactions={transactions} />
             : page==='shipment'  ? <ShipmentManage transactions={transactions} stockMap={stockMap} />
             : page==='history'   ? <History transactions={transactions} />
+            : page==='shipcal'   ? <ShipmentCalendar transactions={transactions} onNavigate={setPage}/>
             : page==='admin'     ? <AdminPage />
             : null}
         </main>

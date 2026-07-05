@@ -23,7 +23,7 @@ const HOLIDAYS_2026 = {
 const DAYS = ['일', '월', '화', '수', '목', '금', '토']
 const MONTHS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월']
 
-export default function SideCalendar({ transactions }) {
+export default function SideCalendar({ transactions, onNavigate }) {
   const today = new Date()
   const [year,  setYear]  = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth())
@@ -55,6 +55,7 @@ export default function SideCalendar({ transactions }) {
   const dateStr = (d) => `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
 
   const openModal = (d) => {
+    if (onNavigate) { onNavigate('shipcal'); return }
     const ds = dateStr(d)
     const plans = planMap[ds] || []
     setSelected(ds)
