@@ -2,7 +2,7 @@ import SideCalendar from './components/SideCalendar'
 import SideCalculator from './components/SideCalculator'
 import { useState, useEffect, useMemo } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { collection, onSnapshot, orderBy, query } from 'firebase/firestore'
+import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore'
 import { db } from './firebase'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import Dashboard from './pages/Dashboard'
@@ -21,12 +21,19 @@ function MainApp() {
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
   const [sideCollapsed, setSideCollapsed] = useState(false)
+  const [pendingCount, setPendingCount] = useState(0)
   const [sidePanel, setSidePanel] = useState(null)
   const [toast, setToast] = useState(null)
   const [showPrint, setShowPrint] = useState(false)
 
   useEffect(() => {
     if (!currentUser) return
+// pending users 리스너
+    let unsubUsers = () => {}
+    if (userRole === 'admin') {
+      const qUsers = query(collection(db, 'users'), where('role', '==', 'pending'))
+      unsubUsers = onSnapshot(qUsers, snap => setPendingCount(snap.size))
+    }
     const q = query(collection(db, 'transactions'), orderBy('date', 'desc'))
     return onSnapshot(q, snap => {
       setTransactions(snap.docs.map(d => ({ id: d.id, ...d.data() })))
