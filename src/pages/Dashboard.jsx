@@ -12,7 +12,7 @@ export default function Dashboard({ transactions, stockMap }) {
   const itemStats = useMemo(() => ITEMS.map(item => {
     const stock      = stockMap[item.code] || 0
     const assemblable = Math.floor(stock / item.needPerSet)
-    const status     = stock === 0 ? 'empty' : assemblable < 50 ? 'low' : 'ok'
+    const status     = stock === 0 ? 'empty' : assemblable < 80 ? 'low' : 'ok'
     const surplus    = stock - item.needPerSet * base
     const required   = sim > 0 ? item.needPerSet * sim : 0
     const shortage   = sim > 0 ? Math.max(0, required - stock) : 0
@@ -34,7 +34,7 @@ export default function Dashboard({ transactions, stockMap }) {
         <div style={S.div}/>
         <SumItem label="재고없음" value={`${emptyCount}품목`} color="#dc2626"/>
         <div style={S.div}/>
-        <SumItem label="발주필요 (50SET↓)" value={`${lowCount}품목`} color="#d97706"/>
+        <SumItem label="발주필요 (80SET↓)" value={`${lowCount}품목`} color="#d97706"/>
         <div style={S.div}/>
         <SumItem label="전체 품목" value={`${ITEMS.length}개`} color="#374151"/>
       </div>
