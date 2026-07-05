@@ -21,6 +21,8 @@ export default function History({ transactions }) {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo,   setDateTo]   = useState('')
   const [logs, setLogs]         = useState([])
+  const [sortField, setSortField] = useState('date')
+  const [sortDir,   setSortDir]   = useState('desc')
 
   // 수정 로그 실시간 로딩
   useEffect(() => {
@@ -31,6 +33,12 @@ export default function History({ transactions }) {
     })
   }, [tab])
 
+  const toggleSort = (field) => {
+    if (sortField === field) setSortDir(d => d==='desc'?'asc':'desc')
+    else { setSortField(field); setSortDir('desc') }
+  }
+  const sortIcon = (field) => sortField===field ? (sortDir==='desc'?'↓':'↑') : '↕'
+
   const from = parseDate(dateFrom)
   const to   = parseDate(dateTo)
 
@@ -39,8 +47,14 @@ export default function History({ transactions }) {
       .filter(t => t.type === '입고' || t.type === '출고' || t.type === '출하계획')
       .filter(t => !(t.type === '출하계획' && !t.isHeader))
       .sort((a,b) => {
-        if (b.date !== a.date) return b.date.localeCompare(a.date)
-        return (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0)
+        let va, vb
+        if (sortField==='date') { va=a.date; vb=b.date }
+        else if (sortField==='type') { va=a.type; vb=b.type }
+        else if (sortField==='itemCode') { va=a.itemCode||''; vb=b.itemCode||'' }
+        else if (sortField==='quantity') { va=a.quantity||0; vb=b.quantity||0 }
+        else { va=a.date; vb=b.date }
+        if (typeof va==='number') return sortDir==='desc'?vb-va:va-vb
+        return sortDir==='desc'?vb.localeCompare(va):va.localeCompare(vb)
       })
       .filter(t => {
         const q = search.toLowerCase()
