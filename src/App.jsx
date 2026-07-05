@@ -1,3 +1,5 @@
+import SideCalendar from './components/SideCalendar'
+import SideCalculator from './components/SideCalculator'
 import { useState, useEffect, useMemo } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore'
