@@ -96,9 +96,9 @@ export default function Dashboard({ transactions, stockMap }) {
             <thead>
               <tr>
                 <th style={{...S.th, textAlign:'center', width:60}}>코드</th>
-                <th style={{...S.th, textAlign:'left', width:200}}>품목명</th>
+                <th style={{...S.th, textAlign:'left'}}>품목명</th>
                 <th style={{...S.th, textAlign:'center', width:70}}>필요</th>
-                <th style={{...S.th, textAlign:'right', width:90}}>현재고</th>
+                <th style={{...S.th, textAlign:'right', width:80}}>현재고</th>
                 {sim > 0 ? (
                   <>
                     <th style={{...S.th, textAlign:'right', width:110, background:'#1e3a5c'}}>필요 ({sim}SET)</th>
@@ -243,8 +243,8 @@ const S = {
   cardSub:  {fontSize:11,color:'#94a3b8',marginTop:2},
 
   tableWrap:{overflowY:'auto',flex:1},
-  table:    {width:'100%',borderCollapse:'collapse',tableLayout:'fixed'},
-  th:       {background:'#1e293b',color:'#94a3b8',padding:'9px 12px',fontSize:11,fontWeight:700,position:'sticky',top:0,letterSpacing:0.5,whiteSpace:'nowrap'},
-  td:       {padding:'8px 12px',fontSize:13,color:'#1e293b',borderBottom:'1px solid #f1f5f9'},
+  table:    {width:'100%',borderCollapse:'collapse'},
+  th:       {background:'#1e293b',color:'#94a3b8',padding:'8px 10px',fontSize:11,fontWeight:700,position:'sticky',top:0,letterSpacing:0.3,whiteSpace:'nowrap'},
+  td:       {padding:'8px 10px',fontSize:12,color:'#1e293b',borderBottom:'1px solid #f1f5f9',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:0},
   codeTag:  {background:'#eff6ff',color:'#1e40af',padding:'1px 7px',borderRadius:4,fontSize:11,fontWeight:800},
 }
