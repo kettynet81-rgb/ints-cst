@@ -82,7 +82,7 @@ export default function Dashboard({ transactions, stockMap }) {
             <thead>
               <tr>
                 <th style={{...S.th, textAlign:'center', width:60}}>코드</th>
-                <th style={{...S.th, textAlign:'left'}}>품목명</th>
+                <th style={{...S.th, textAlign:'left', width:200}}>품목명</th>
                 <th style={{...S.th, textAlign:'center', width:70}}>필요</th>
                 <th style={{...S.th, textAlign:'right', width:90}}>현재고</th>
                 {sim > 0 ? (
