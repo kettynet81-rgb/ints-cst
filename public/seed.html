@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>CST 데이터 초기 적재</title>
+<style>
+  body { font-family: 맑은 고딕, sans-serif; max-width: 600px; margin: 60px auto; padding: 20px; }
+  h2 { color: #1e3a5f; }
+  button { background: #1e40af; color: white; border: none; padding: 14px 32px; font-size: 16px; border-radius: 8px; cursor: pointer; font-family: inherit; }
+  button:disabled { background: #93c5fd; cursor: not-allowed; }
+  #log { margin-top: 20px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; height: 300px; overflow-y: auto; font-size: 13px; line-height: 1.8; }
+  .ok { color: #16a34a; } .err { color: #dc2626; }
+</style>
+</head>
+<body>
+<h2>📦 CST 재고 초기 데이터 적재</h2>
+<p>버튼을 누르면 기존 입고 데이터 125건을 Firestore에 저장합니다.</p>
+<button id="btn" onclick="seed()">데이터 적재 시작</button>
+<div id="log">대기 중...</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const app = initializeApp({
+  apiKey: "AIzaSyCgjC4oUR_-RLCZPeW95J3VGg7U4-Ui8bk",
+  authDomain: "ints-cst.firebaseapp.com",
+  projectId: "ints-cst",
+  storageBucket: "ints-cst.firebasestorage.app",
+  messagingSenderId: "418459474599",
+  appId: "1:418459474599:web:c881ce32f72afa3dc15982"
+});
+const db = getFirestore(app);
+
+const data = [
+  ["2026-06-11","입고","A8","REAR STOPPER (아세탈)",116,"좌68/우48"],
+  ["2026-06-11","입고","A9","SLIDE PEEK GUIDE-1",174,""],
+  ["2026-06-11","입고","A10","SLIDE UPE GUIDE-2",205,""],
+  ["2026-06-11","입고","A11","SLIDE ALUMINIUM GUIDE-3",522,""],
+  ["2026-06-11","입고","A16","TOP COVER (상판) ABS",44,""],
+  ["2026-06-11","입고","A19","BOTTOM COVER (하판) ABS",94,""],
+  ["2026-06-11","입고","A28","플랜지",600,""],
+  ["2026-06-12","입고","A1","CASSETTE PLATE",300,"좌150/우150"],
+  ["2026-06-12","입고","A16","TOP COVER (상판) ABS",61,""],
+  ["2026-06-12","입고","A17","TOP COVER BACK BLOCK (정사각)",120,""],
+  ["2026-06-12","입고","A19","BOTTOM COVER (하판) ABS",106,""],
+  ["2026-06-13","입고","A2","HANDLE BLOCK",100,"IFZF001~100"],
+  ["2026-06-13","입고","A8","REAR STOPPER (아세탈)",106,"좌74/우32"],
+  ["2026-06-13","입고","A9","SLIDE PEEK GUIDE-1",94,""],
+  ["2026-06-13","입고","A10","SLIDE UPE GUIDE-2",99,""],
+  ["2026-06-13","입고","A11","SLIDE ALUMINIUM GUIDE-3",868,""],
+  ["2026-06-13","입고","A13","FRONT COVER TOP BLOCK (반사대)",284,""],
+  ["2026-06-13","입고","A17","TOP COVER BACK BLOCK (정사각)",629,""],
+  ["2026-06-13","입고","A21","RAIL PLATE (날개)",308,""],
+  ["2026-06-15","입고","A8","REAR STOPPER (아세탈)",168,"좌94/우74"],
+  ["2026-06-15","입고","A9","SLIDE PEEK GUIDE-1",106,""],
+  ["2026-06-15","입고","A16","TOP COVER (상판) ABS",85,""],
+  ["2026-06-15","입고","A19","BOTTOM COVER (하판) ABS",131,""],
+  ["2026-06-16","입고","A8","REAR STOPPER (아세탈)",328,"좌166/우162"],
+  ["2026-06-16","입고","A9","SLIDE PEEK GUIDE-1",214,""],
+  ["2026-06-16","입고","A10","SLIDE UPE GUIDE-2",265,""],
+  ["2026-06-16","입고","A11","SLIDE ALUMINIUM GUIDE-3",442,""],
+  ["2026-06-16","입고","A16","TOP COVER (상판) ABS",56,""],
+  ["2026-06-16","입고","A19","BOTTOM COVER (하판) ABS",59,""],
+  ["2026-06-16","입고","A21","RAIL PLATE (날개)",273,""],
+  ["2026-06-16","입고","A24","WAFER RING GUIDE (CNT)",440,""],
+  ["2026-06-17","입고","A1","CASSETTE PLATE",120,"우120"],
+  ["2026-06-17","입고","A3","HANDLE",400,""],
+  ["2026-06-17","입고","A5","FLANGE BLOCKING BLOCK",598,""],
+  ["2026-06-17","입고","A6","BOTTOM FRONT SUPPORT",369,""],
+  ["2026-06-17","입고","A7","BOTTOM REAR SUPPORT (홀2)",52,""],
+  ["2026-06-17","입고","A9","SLIDE PEEK GUIDE-1",82,""],
+  ["2026-06-17","입고","A13","FRONT COVER TOP BLOCK (반사대)",182,""],
+  ["2026-06-17","입고","A14","FRONT COVER SLIDE BLOCK (피크)",156,"본도63/대칭93"],
+  ["2026-06-17","입고","A16","TOP COVER (상판) ABS",74,""],
+  ["2026-06-17","입고","A19","BOTTOM COVER (하판) ABS",96,""],
+  ["2026-06-17","입고","A22","BOTTOM CENTER SUPPORT (홀1)",302,""],
+  ["2026-06-17","입고","A25","REFLECTIVE PLATE BLOCK (미러대)",2000,""],
+  ["2026-06-17","입고","A26","REFLECTIVE PLATE COVER",2000,""],
+  ["2026-06-18","입고","A8","REAR STOPPER (아세탈)",138,"좌82/우56"],
+  ["2026-06-18","입고","A9","SLIDE PEEK GUIDE-1",70,""],
+  ["2026-06-18","입고","A10","SLIDE UPE GUIDE-2",223,""],
+  ["2026-06-18","입고","A11","SLIDE ALUMINIUM GUIDE-3",157,""],
+  ["2026-06-18","입고","A16","TOP COVER (상판) ABS",89,""],
+  ["2026-06-18","입고","A19","BOTTOM COVER (하판) ABS",68,""],
+  ["2026-06-19","입고","A1","CASSETTE PLATE",120,"우120"],
+  ["2026-06-19","입고","A2","HANDLE BLOCK",700,"IFZF001~IFZF700"],
+  ["2026-06-19","입고","A6","BOTTOM FRONT SUPPORT",95,""],
+  ["2026-06-19","입고","A8","REAR STOPPER (아세탈)",289,"좌161/우128"],
+  ["2026-06-19","입고","A9","SLIDE PEEK GUIDE-1",172,""],
+  ["2026-06-19","입고","A11","SLIDE ALUMINIUM GUIDE-3",148,""],
+  ["2026-06-19","입고","A12","FRONT COVER (전면)",48,""],
+  ["2026-06-19","입고","A13","FRONT COVER TOP BLOCK (반사대)",363,""],
+  ["2026-06-19","입고","A15","BACK COVER (후면)",354,""],
+  ["2026-06-19","입고","A16","TOP COVER (상판) ABS",56,""],
+  ["2026-06-19","입고","A17","TOP COVER BACK BLOCK (정사각)",418,""],
+  ["2026-06-19","입고","A18","TOP COVER FRONT BLOCK (실리콘)",77,""],
+  ["2026-06-19","입고","A19","BOTTOM COVER (하판) ABS",28,""],
+  ["2026-06-19","입고","A20","BOTTOM COVER BACK BLOCK (직사각)",102,""],
+  ["2026-06-19","입고","A21","RAIL PLATE (날개)",328,""],
+  ["2026-06-19","입고","A24","WAFER RING GUIDE (CNT)",400,""],
+  ["2026-06-22","입고","A1","CASSETTE PLATE",150,"좌150"],
+  ["2026-06-22","입고","A3","HANDLE",315,""],
+  ["2026-06-22","입고","A8","REAR STOPPER (아세탈)",95,"좌42/우53"],
+  ["2026-06-22","입고","A9","SLIDE PEEK GUIDE-1",143,""],
+  ["2026-06-22","입고","A12","FRONT COVER (전면)",48,""],
+  ["2026-06-22","입고","A13","FRONT COVER TOP BLOCK (반사대)",2,""],
+  ["2026-06-22","입고","A16","TOP COVER (상판) ABS",26,"불량8"],
+  ["2026-06-22","입고","A19","BOTTOM COVER (하판) ABS",40,"불량17"],
+  ["2026-06-23","입고","A3","HANDLE",197,""],
+  ["2026-06-23","입고","A7","BOTTOM REAR SUPPORT (홀2)",647,""],
+  ["2026-06-23","입고","A8","REAR STOPPER (아세탈)",381,"좌150/우231"],
+  ["2026-06-23","입고","A9","SLIDE PEEK GUIDE-1",203,""],
+  ["2026-06-23","입고","A11","SLIDE ALUMINIUM GUIDE-3",286,""],
+  ["2026-06-23","입고","A13","FRONT COVER TOP BLOCK (반사대)",132,""],
+  ["2026-06-23","입고","A14","FRONT COVER SLIDE BLOCK (피크)",498,"본도278/대칭220"],
+  ["2026-06-23","입고","A16","TOP COVER (상판) ABS",92,"불량8"],
+  ["2026-06-23","입고","A19","BOTTOM COVER (하판) ABS",86,"불량17"],
+  ["2026-06-23","입고","A21","RAIL PLATE (날개)",104,""],
+  ["2026-06-24","입고","A1","CASSETTE PLATE",160,"우160"],
+  ["2026-06-24","입고","A3","HANDLE",275,"불량25"],
+  ["2026-06-24","입고","A9","SLIDE PEEK GUIDE-1",55,""],
+  ["2026-06-24","입고","A16","TOP COVER (상판) ABS",90,"불량14"],
+  ["2026-06-24","입고","A19","BOTTOM COVER (하판) ABS",81,"불량17"],
+  ["2026-06-24","입고","A22","BOTTOM CENTER SUPPORT (홀1)",300,""],
+  ["2026-06-24","입고","A24","WAFER RING GUIDE (CNT)",238,""],
+  ["2026-06-25","입고","A6","BOTTOM FRONT SUPPORT",83,""],
+  ["2026-06-25","입고","A9","SLIDE PEEK GUIDE-1",174,""],
+  ["2026-06-25","입고","A10","SLIDE UPE GUIDE-2",300,""],
+  ["2026-06-25","입고","A11","SLIDE ALUMINIUM GUIDE-3",468,""],
+  ["2026-06-25","입고","A14","FRONT COVER SLIDE BLOCK (피크)",375,"본도188/대칭187"],
+  ["2026-06-25","입고","A16","TOP COVER (상판) ABS",87,"불량19"],
+  ["2026-06-25","입고","A20","BOTTOM COVER BACK BLOCK (직사각)",100,""],
+  ["2026-06-25","입고","A24","WAFER RING GUIDE (CNT)",117,""],
+  ["2026-06-26","입고","A1","CASSETTE PLATE",268,"좌161/우107"],
+  ["2026-06-26","입고","A8","REAR STOPPER (아세탈)",325,"자사가공+외주"],
+  ["2026-06-26","입고","A9","SLIDE PEEK GUIDE-1",663,""],
+  ["2026-06-26","입고","A11","SLIDE ALUMINIUM GUIDE-3",163,""],
+  ["2026-06-26","입고","A14","FRONT COVER SLIDE BLOCK (피크)",200,"좌100/우100"],
+  ["2026-06-26","입고","A20","BOTTOM COVER BACK BLOCK (직사각)",666,""],
+  ["2026-06-29","입고","A8","REAR STOPPER (아세탈)",600,"수정전+수정후"],
+  ["2026-06-29","입고","A9","SLIDE PEEK GUIDE-1",458,""],
+  ["2026-06-29","입고","A10","SLIDE UPE GUIDE-2",263,""],
+  ["2026-06-29","입고","A11","SLIDE ALUMINIUM GUIDE-3",400,""],
+  ["2026-06-29","입고","A12","FRONT COVER (전면)",316,"불량48"],
+  ["2026-06-29","입고","A13","FRONT COVER TOP BLOCK (반사대)",608,"본도292/대칭316"],
+  ["2026-06-29","입고","A16","TOP COVER (상판) ABS",128,"불량19"],
+  ["2026-06-29","입고","A19","BOTTOM COVER (하판) ABS",56,"불량17"],
+  ["2026-06-29","입고","A21","RAIL PLATE (날개)",424,""],
+  ["2026-06-30","입고","A16","TOP COVER (상판) ABS",35,"불량18"],
+  ["2026-06-30","입고","A19","BOTTOM COVER (하판) ABS",94,"불량15"],
+  ["2026-06-30","입고","A21","RAIL PLATE (날개)",332,""],
+  ["2026-07-01","입고","A6","BOTTOM FRONT SUPPORT",41,""],
+  ["2026-07-01","입고","A9","SLIDE PEEK GUIDE-1",242,""],
+  ["2026-07-01","입고","A16","TOP COVER (상판) ABS",55,"불량18"],
+  ["2026-07-01","입고","A18","TOP COVER FRONT BLOCK (실리콘)",294,""],
+  ["2026-07-01","입고","A19","BOTTOM COVER (하판) ABS",54,"불량15"],
+];
+
+window.seed = async function() {
+  const btn = document.getElementById('btn');
+  const log = document.getElementById('log');
+  btn.disabled = true;
+  log.innerHTML = '';
+
+  const col = collection(db, 'transactions');
+  let ok = 0;
+  for (const [date, type, itemCode, itemName, quantity, memo] of data) {
+    try {
+      await addDoc(col, { date, type, itemCode, itemName, quantity, memo, createdAt: new Date() });
+      ok++;
+      log.innerHTML += `<span class="ok">✔ ${ok}건 - [${itemCode}] ${itemName} ${quantity}EA</span><br>`;
+      log.scrollTop = log.scrollHeight;
+    } catch(e) {
+      log.innerHTML += `<span class="err">✘ 오류: ${e.message}</span><br>`;
+    }
+  }
+  log.innerHTML += `<br><strong class="ok">🎉 완료! 총 ${ok}건 적재됨</strong>`;
+  btn.textContent = '완료!';
+}
+</script>
+</body>
+</html>
