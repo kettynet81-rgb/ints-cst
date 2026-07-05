@@ -57,10 +57,11 @@ function MainApp() {
     <div style={S.root}>
       <aside style={{...S.sidebar, width: sideCollapsed ? 60 : 220}}>
         <div style={S.logoArea}>
-          <div style={S.logoMark}><span style={{fontSize:14,fontWeight:900,color:'#fff'}}>IN</span></div>
+          <button style={S.logoBtn} onClick={()=>setPage('dashboard')} title="홈으로">
+            <img src="/ints-logo.png" alt="INTS" style={{height:28,objectFit:'contain',display:'block'}} />
+          </button>
           {!sideCollapsed && (
             <div style={{flex:1,minWidth:0}}>
-              <div style={S.logoTitle}>INTS</div>
               <div style={S.logoSub}>CST 재고관리</div>
             </div>
           )}
@@ -113,6 +114,11 @@ function MainApp() {
           <div style={{display:'flex',alignItems:'center',gap:12}}>
             <span style={{fontSize:12,color:'#64748b'}}>{dateStr}</span>
             <div style={{width:1,height:16,background:'#e2e8f0'}}/>
+            <button onClick={()=>window.location.reload()}
+              style={{background:'none',border:'1px solid #e2e8f0',borderRadius:6,padding:'4px 10px',cursor:'pointer',fontSize:12,color:'#64748b',display:'flex',alignItems:'center',gap:4}}>
+              ↻ 새로고침
+            </button>
+            <div style={{width:1,height:16,background:'#e2e8f0'}}/>
             <span style={{fontSize:13,fontWeight:600,color:'#374151'}}>{userData?.name} 님</span>
           </div>
         </header>
@@ -152,8 +158,7 @@ const S = {
   root: {display:'flex',height:'100vh',overflow:'hidden',background:'#f1f5f9'},
   sidebar: {background:'#0f172a',display:'flex',flexDirection:'column',flexShrink:0,transition:'width 0.2s',overflow:'hidden'},
   logoArea: {padding:'16px 12px',display:'flex',alignItems:'center',gap:8,borderBottom:'1px solid #1e293b',flexShrink:0},
-  logoMark: {width:32,height:32,background:'linear-gradient(135deg,#3b82f6,#1e40af)',borderRadius:7,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0},
-  logoTitle:{fontSize:13,fontWeight:800,color:'#f8fafc',letterSpacing:1},
+  logoBtn:  {background:'none',border:'none',cursor:'pointer',padding:'2px 4px',borderRadius:6,flexShrink:0,display:'flex',alignItems:'center'},
   logoSub:  {fontSize:10,color:'#475569',marginTop:1},
   collapseBtn:{marginLeft:'auto',background:'none',border:'none',color:'#475569',cursor:'pointer',fontSize:16,padding:'2px 4px',flexShrink:0},
   groupLabel: {fontSize:10,fontWeight:700,color:'#475569',letterSpacing:1.2,textTransform:'uppercase',padding:'4px 10px 5px'},
