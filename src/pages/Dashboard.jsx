@@ -3,7 +3,10 @@ import { ITEMS } from '../data/items'
 
 export default function Dashboard({ transactions, stockMap }) {
   const [simQty, setSimQty] = useState('')
+  const [baseQty, setBaseQty] = useState('112')
   const sim = Number(simQty)
+
+  const base = Number(baseQty) || 0
 
   const itemStats = useMemo(() => ITEMS.map(item => {
     const stock      = stockMap[item.code] || 0
@@ -12,7 +15,9 @@ export default function Dashboard({ transactions, stockMap }) {
     const shortage   = sim > 0 ? Math.max(0, required - stock) : 0
     const status     = stock === 0 ? 'empty' : assemblable < 50 ? 'low' : 'ok'
     const simStatus  = sim > 0 ? (shortage > 0 ? 'short' : 'ok') : null
-    return { ...item, stock, assemblable, required, shortage, status, simStatus }
+    const baseNeed   = item.needPerSet * base
+    const surplus    = stock - baseNeed  // 양수=과잉, 음수=부족
+    return { ...item, stock, assemblable, required, shortage, status, simStatus, surplus, baseNeed }
   }), [stockMap, sim])
 
   const minSet      = Math.min(...itemStats.map(i => i.assemblable))
@@ -33,8 +38,17 @@ export default function Dashboard({ transactions, stockMap }) {
         <div style={S.sumDiv}/>
         <SumItem label="전체 품목" value={`${ITEMS.length}개`} color="#374151" />
 
-        {/* SET 시뮬레이터 */}
-        <div style={{marginLeft:'auto', display:'flex', alignItems:'center', gap:10}}>
+        {/* 기준 SET + 시뮬레이터 */}
+        <div style={{marginLeft:'auto', display:'flex', alignItems:'center', gap:16}}>
+          {/* 기준 SET */}
+          <div style={{display:'flex',alignItems:'center',gap:6}}>
+            <span style={{fontSize:11,color:'#94a3b8',whiteSpace:'nowrap'}}>기준 SET</span>
+            <input type="number" min="1" value={baseQty}
+              onChange={e=>setBaseQty(e.target.value)}
+              style={{width:65,padding:'4px 8px',border:'2px solid #e2e8f0',borderRadius:6,fontSize:13,fontWeight:700,textAlign:'center',fontFamily:'inherit',outline:'none'}}
+            />
+          </div>
+          <div style={{width:1,height:24,background:'#e2e8f0'}}/>
           <span style={{fontSize:12, color:'#64748b', whiteSpace:'nowrap'}}>조립 시뮬레이션</span>
           <div style={S.simInputWrap}>
             <input
@@ -145,6 +159,11 @@ export default function Dashboard({ transactions, stockMap }) {
                           {item.status==='empty' && <Badge c="#dc2626" bg="#fee2e2" t="재고없음"/>}
                           {item.status==='low'   && <Badge c="#d97706" bg="#fef3c7" t="발주필요"/>}
                           {item.status==='ok'    && <Badge c="#16a34a" bg="#dcfce7" t="정상"/>}
+                        </td>
+                        <td style={{...S.td, textAlign:'right', fontWeight:700,
+                          color: item.surplus >= 0 ? '#16a34a' : '#dc2626',
+                          fontVariantNumeric:'tabular-nums'}}>
+                          {base > 0 ? (item.surplus >= 0 ? `+${item.surplus.toLocaleString()}` : item.surplus.toLocaleString()) : '—'}
                         </td>
                       </>
                     )}
