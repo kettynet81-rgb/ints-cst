@@ -3,6 +3,8 @@ import { useState, useMemo } from 'react'
 export default function History({ transactions }) {
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('전체')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo]   = useState('')
 
   const filtered = useMemo(() => {
     return [...transactions].filter(t => t.type === '입고' || t.type === '출고')
@@ -35,6 +37,20 @@ export default function History({ transactions }) {
 
       {/* 검색/필터 */}
       <div style={S.toolbar}>
+        {/* 날짜 범위 */}
+        <div style={{display:'flex',alignItems:'center',gap:6}}>
+          <input type="text" value={dateFrom} onChange={e=>setDateFrom(e.target.value)}
+            placeholder="시작일 (7/1)"
+            style={{...S.dateInp}} />
+          <span style={{color:'#94a3b8',fontSize:12}}>~</span>
+          <input type="text" value={dateTo} onChange={e=>setDateTo(e.target.value)}
+            placeholder="종료일 (7/31)"
+            style={{...S.dateInp}} />
+          {(dateFrom||dateTo) && (
+            <button onClick={()=>{setDateFrom('');setDateTo('')}}
+              style={{background:'none',border:'none',color:'#94a3b8',cursor:'pointer',fontSize:14}}>✕</button>
+          )}
+        </div>
         <div style={S.searchWrap}>
           <span style={S.searchIcon}>🔍</span>
           <input style={S.searchInput} placeholder="품목코드·품목명·메모 검색"
