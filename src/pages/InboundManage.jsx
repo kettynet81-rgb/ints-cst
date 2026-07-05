@@ -33,7 +33,6 @@ export default function InboundManage({ transactions }) {
   const [form, setForm]     = useState({ date: today(), itemCode:'', quantity:'', memo:'' })
   const [saving, setSaving] = useState(false)
   const [saved,  setSaved]  = useState(false)
-  const [mode,   setMode]   = useState('text') // 'text' | 'select'
 
   const dateRef = useRef(null)
   const codeRef = useRef(null)
@@ -118,15 +117,7 @@ export default function InboundManage({ transactions }) {
       <div style={S.inputCard}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
           <div style={S.inputLabel}>입고 등록</div>
-          {/* 모드 토글 */}
-          <div style={S.modeToggle}>
-            <button style={mode==='text' ? S.modeActive : S.modeBtn} onClick={()=>setMode('text')}>
-              ⌨ 직접 입력
-            </button>
-            <button style={mode==='select' ? S.modeActive : S.modeBtn} onClick={()=>setMode('select')}>
-              ☰ 선택 입력
-            </button>
-          </div>
+
         </div>
 
         <div style={S.inputRow}>
@@ -317,9 +308,6 @@ const S = {
   inputCard:  {background:'#fff',borderRadius:10,border:'1px solid #e2e8f0',padding:'16px 20px'},
   inputLabel: {fontSize:11,fontWeight:700,color:'#94a3b8',letterSpacing:1,textTransform:'uppercase'},
 
-  modeToggle: {display:'flex',gap:0,border:'1px solid #e2e8f0',borderRadius:7,overflow:'hidden'},
-  modeBtn:    {padding:'6px 14px',background:'#fff',border:'none',color:'#64748b',cursor:'pointer',fontSize:12,fontFamily:'inherit'},
-  modeActive: {padding:'6px 14px',background:'#1e40af',border:'none',color:'#fff',cursor:'pointer',fontSize:12,fontFamily:'inherit',fontWeight:700},
 
   inputRow:  {display:'flex',gap:12,alignItems:'flex-end',flexWrap:'wrap'},
   field:     {display:'flex',flexDirection:'column',gap:5},
