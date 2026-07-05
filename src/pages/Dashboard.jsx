@@ -225,7 +225,7 @@ const S = {
 
   tableWrap:{overflowY:'auto',flex:1},
   table:    {width:'100%',borderCollapse:'collapse',tableLayout:'fixed'},
-  th:       {background:'#1e293b',color:'#94a3b8',padding:'7px 12px',fontSize:10,fontWeight:700,position:'sticky',top:0,letterSpacing:0.5,whiteSpace:'nowrap'},
-  td:       {padding:'5px 12px',fontSize:12,color:'#1e293b',borderBottom:'1px solid #f1f5f9'},
+  th:       {background:'#1e293b',color:'#94a3b8',padding:'9px 12px',fontSize:11,fontWeight:700,position:'sticky',top:0,letterSpacing:0.5,whiteSpace:'nowrap'},
+  td:       {padding:'8px 12px',fontSize:13,color:'#1e293b',borderBottom:'1px solid #f1f5f9'},
   codeTag:  {background:'#eff6ff',color:'#1e40af',padding:'1px 7px',borderRadius:4,fontSize:11,fontWeight:800},
 }
