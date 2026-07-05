@@ -36,7 +36,7 @@ export default function Dashboard({ transactions, stockMap }) {
         <div style={S.div}/>
         <SumItem label="재고없음" value={`${emptyCount}품목`} color="#dc2626"/>
         <div style={S.div}/>
-        <SumItem label="발주필요 ({lowQty}SET↓)" value={`${lowCount}품목`} color="#d97706"/>
+        <SumItem label="`발주필요 (${lowQty}SET↓)`" value={`${lowCount}품목`} color="#d97706"/>
       </div>
 
       {/* 테이블 카드 */}
@@ -93,7 +93,7 @@ export default function Dashboard({ transactions, stockMap }) {
           <table style={{width:'100%',borderCollapse:'collapse',tableLayout:'fixed'}}>
             <colgroup>
               <col style={{width:55}}/>
-              <col style={{width:220}}/>
+              <col style={{width:180}}/>
               <col style={{width:48}}/>
               <col style={{width:82}}/>
               <col style={{width:80}}/>
