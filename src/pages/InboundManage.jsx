@@ -1,26 +1,18 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import { collection, addDoc, deleteDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase'
 import { ITEMS } from '../data/items'
 
-const ITEM_MAP  = Object.fromEntries(ITEMS.map(i => [i.code, i.name]))
+const ITEM_MAP = Object.fromEntries(ITEMS.map(i => [i.code, i.name]))
+const today    = () => new Date().toISOString().slice(0,10)
 
-const today = () => new Date().toISOString().slice(0,10)
-
-// 날짜 단축 입력 파싱: "7/5" "75" "0705" → "2026-07-05"
 const parseDate = (v) => {
   const year = new Date().getFullYear()
-  v = v.trim().replace(/[.]/g, '/')
-  // M/D 형식
+  v = v.trim().replace(/\./g, '/')
   const slash = v.match(/^(\d{1,2})\/(\d{1,2})$/)
-  if (slash) {
-    const m = slash[1].padStart(2,'0'), d = slash[2].padStart(2,'0')
-    return `${year}-${m}-${d}`
-  }
-  // MMDD 형식
+  if (slash) return `${year}-${slash[1].padStart(2,'0')}-${slash[2].padStart(2,'0')}`
   const mmdd = v.match(/^(\d{2})(\d{2})$/)
   if (mmdd) return `${year}-${mmdd[1]}-${mmdd[2]}`
-  // 이미 올바른 형식
   if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v
   return v
 }
@@ -30,155 +22,108 @@ export default function InboundManage({ transactions }) {
     .filter(t => t.type === '입고')
     .sort((a,b) => b.date.localeCompare(a.date) || (b.createdAt?.seconds||0)-(a.createdAt?.seconds||0))
 
-  const [form, setForm]     = useState({ date: today(), itemCode:'', quantity:'', memo:'' })
+  const [form, setForm]     = useState({ date:today(), itemCode:'', quantity:'', memo:'' })
   const [saving, setSaving] = useState(false)
   const [saved,  setSaved]  = useState(false)
+  const [editId, setEditId] = useState(null)
+  const [editData, setEditData] = useState({})
+  const [deleting, setDel]  = useState(null)
 
   const dateRef = useRef(null)
   const codeRef = useRef(null)
   const qtyRef  = useRef(null)
   const memoRef = useRef(null)
 
-  const [editId, setEditId]     = useState(null)
-  const [editData, setEditData] = useState({})
-  const [deleting, setDeleting] = useState(null)
-
-  const setF = (k, v) => setForm(f => ({...f, [k]: v}))
+  const setF = (k, v) => setForm(f => ({...f, [k]:v}))
 
   const codeUpper = form.itemCode.trim().toUpperCase()
-  const foundItem = ITEMS.find(i => i.code === codeUpper) || ITEMS.find(i => i.code === 'A'+codeUpper)
+  const foundItem = ITEMS.find(i => i.code === codeUpper)
+
+  // 품목코드 확정: 숫자만 입력 시 A 자동 추가
+  const finalizeCode = (v, goNext=false) => {
+    let val = v.trim().toUpperCase()
+    if (/^\d+$/.test(val)) val = 'A' + val
+    setF('itemCode', val)
+    if (ITEMS.find(i => i.code === val) && goNext) setTimeout(() => qtyRef.current?.focus(), 50)
+  }
 
   const handleSave = async () => {
-    if (!form.date || !foundItem || !form.quantity || Number(form.quantity) <= 0) return
+    const item = ITEMS.find(i => i.code === form.itemCode.trim().toUpperCase())
+    if (!form.date || !item || !form.quantity || Number(form.quantity) <= 0) return
     setSaving(true)
     await addDoc(collection(db, 'transactions'), {
-      type: '입고',
-      date: form.date,
-      itemCode: foundItem.code,
-      itemName: foundItem.name,
-      quantity: Number(form.quantity),
-      memo: form.memo.trim(),
-      createdAt: serverTimestamp(),
+      type:'입고', date:form.date,
+      itemCode:item.code, itemName:item.name,
+      quantity:Number(form.quantity), memo:form.memo.trim(),
+      createdAt:serverTimestamp(),
     })
-    setForm({ date: today(), itemCode:'', quantity:'', memo:'' })
-    setSaving(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 1500)
-    // 코드 입력칸으로 포커스
-    setTimeout(() => codeRef.current?.focus(), 50)
+    setForm({ date:today(), itemCode:'', quantity:'', memo:'' })
+    setSaving(false); setSaved(true)
+    setTimeout(() => { setSaved(false); codeRef.current?.focus() }, 1500)
   }
 
-  const handleKeyDown = (e, nextRef) => {
-    if (e.key === 'Enter') {
-      if (nextRef) nextRef.current?.focus()
-      else handleSave()
-    }
-  }
-
-  // 코드 입력 시 대문자 변환 + 매칭되면 수량으로 이동
-  const handleCodeChange = (v) => {
-    // 숫자만 입력하면 A 자동 추가
-    let val = v.toUpperCase()
-    if (/^\d+$/.test(val)) val = 'A' + val
-    const upper = v.toUpperCase()
-    setF('itemCode', upper)
-    const match = ITEMS.find(i => i.code === upper)
-    if (match) setTimeout(() => qtyRef.current?.focus(), 50)
-  }
-
-  const startEdit = (tx) => {
-    setEditId(tx.id)
-    setEditData({ date: tx.date, itemCode: tx.itemCode, quantity: tx.quantity, memo: tx.memo||'' })
-  }
   const saveEdit = async () => {
-    const item = ITEM_MAP[editData.itemCode]
     await updateDoc(doc(db, 'transactions', editId), {
-      date: editData.date,
-      itemCode: editData.itemCode,
-      itemName: item || '',
-      quantity: Number(editData.quantity),
-      memo: editData.memo,
+      date:editData.date, itemCode:editData.itemCode,
+      itemName:ITEM_MAP[editData.itemCode]||'',
+      quantity:Number(editData.quantity), memo:editData.memo,
     })
     setEditId(null)
   }
+
   const deleteRow = async (id) => {
     if (!window.confirm('삭제하시겠습니까?')) return
-    setDeleting(id)
-    await deleteDoc(doc(db, 'transactions', id))
-    setDeleting(null)
+    setDel(id); await deleteDoc(doc(db,'transactions',id)); setDel(null)
   }
 
-  const isReady = form.date && foundItem && form.quantity && Number(form.quantity) > 0
+  const item = ITEMS.find(i => i.code === form.itemCode.trim().toUpperCase())
+  const isReady = form.date && item && form.quantity && Number(form.quantity) > 0
 
   return (
     <div style={S.wrap}>
 
-      {/* ── 입력 카드 ── */}
+      {/* 입력 카드 */}
       <div style={S.inputCard}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
-          <div style={S.inputLabel}>입고 등록</div>
-
-        </div>
-
+        <div style={S.inputLabel}>입고 등록</div>
         <div style={S.inputRow}>
+
           {/* 날짜 */}
           <div style={S.field}>
             <label style={S.label}>날짜</label>
-            {mode === 'text' ? (
-              <input ref={dateRef} type="text" value={form.date}
-                onChange={e => setF('date', e.target.value)}
-                onBlur={e => setF('date', parseDate(e.target.value))}
-                onKeyDown={e => { if(e.key==='Enter'){setF('date',parseDate(form.date));codeRef.current?.focus()} }}
-                placeholder="7/5 또는 0705"
-                style={{...S.inp, width:130}}
-              />
-            ) : (
-              <input type="date" value={form.date}
-                onChange={e => setF('date', e.target.value)}
-                style={{...S.inp, width:150}}
-              />
-            )}
+            <input ref={dateRef} type="text" value={form.date}
+              onChange={e => setF('date', e.target.value)}
+              onBlur={e => setF('date', parseDate(e.target.value))}
+              onKeyDown={e => e.key==='Enter' && (setF('date', parseDate(form.date)), codeRef.current?.focus())}
+              placeholder="7/5 또는 0705"
+              style={{...S.inp, width:130}} />
           </div>
 
-          {/* 품목 */}
-          <div style={{...S.field, flex:2}}>
+          {/* 품목코드 */}
+          <div style={{...S.field, flex:1}}>
             <label style={S.label}>
               품목코드
-              {foundItem && <span style={S.foundName}> → {foundItem.name}</span>}
-              {form.itemCode && !foundItem && <span style={S.notFound}> → 없는 코드</span>}
+              {item && <span style={{color:'#16a34a', fontWeight:700, fontSize:11, marginLeft:6}}>→ {item.name}</span>}
+              {form.itemCode && !item && <span style={{color:'#dc2626', fontSize:11, marginLeft:6}}>→ 없는 코드</span>}
             </label>
-            {mode === 'text' ? (
-              <div style={{position:'relative'}}>
-                <input ref={codeRef} type="text" value={form.itemCode}
-                  onChange={e => handleCodeChange(e.target.value)}
-                  onKeyDown={e => { if(e.key==='Enter'||e.key==='Tab'){e.preventDefault();finalizeCode(form.itemCode,true)} }}
-                onBlur={e => finalizeCode(form.itemCode,false)}
-                  placeholder="A1, A8, A16 ..."
-                  style={{...S.inp, width:160, textTransform:'uppercase',
-                    borderColor: foundItem ? '#16a34a' : form.itemCode ? '#dc2626' : '#e2e8f0'}}
-                />
-                {/* 자동완성 드롭다운 힌트 */}
-                {form.itemCode && !foundItem && (
-                  <div style={S.suggest}>
-                    {ITEMS.filter(i => i.code.startsWith(form.itemCode.toUpperCase())).slice(0,5).map(i => (
-                      <div key={i.code} style={S.suggestItem}
-                        onMouseDown={() => { setF('itemCode', i.code); setTimeout(() => qtyRef.current?.focus(), 50) }}>
-                        <span style={{fontWeight:700,color:'#1e40af',marginRight:8}}>{i.code}</span>
-                        <span style={{fontSize:12,color:'#64748b'}}>{i.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <select value={form.itemCode} onChange={e => setF('itemCode', e.target.value)}
-                style={{...S.inp, width:280}}>
-                <option value="">-- 품목 선택 --</option>
-                {ITEMS.map(i => (
-                  <option key={i.code} value={i.code}>[{i.code}]  {i.name}</option>
-                ))}
-              </select>
-            )}
+            <div style={{position:'relative'}}>
+              <input ref={codeRef} type="text" value={form.itemCode}
+                onChange={e => setF('itemCode', e.target.value.toUpperCase())}
+                onKeyDown={e => { if(e.key==='Enter'||e.key==='Tab'){e.preventDefault(); finalizeCode(form.itemCode, true)} }}
+                onBlur={() => finalizeCode(form.itemCode, false)}
+                placeholder="18 또는 A18"
+                style={{...S.inp, width:150, borderColor: item?'#16a34a': form.itemCode?'#dc2626':'#e2e8f0'}} />
+              {form.itemCode && !item && (
+                <div style={S.suggest}>
+                  {ITEMS.filter(i => i.code.startsWith(form.itemCode.toUpperCase())).slice(0,6).map(i => (
+                    <div key={i.code} style={S.suggestItem}
+                      onMouseDown={() => { setF('itemCode', i.code); setTimeout(()=>qtyRef.current?.focus(),50) }}>
+                      <span style={{fontWeight:700, color:'#1e40af', marginRight:8, width:36}}>{i.code}</span>
+                      <span style={{fontSize:12, color:'#64748b'}}>{i.name}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* 수량 */}
@@ -186,56 +131,52 @@ export default function InboundManage({ transactions }) {
             <label style={S.label}>수량 (EA)</label>
             <input ref={qtyRef} type="number" min="1" value={form.quantity}
               onChange={e => setF('quantity', e.target.value)}
-              onKeyDown={e => handleKeyDown(e, memoRef)}
+              onKeyDown={e => e.key==='Enter' && memoRef.current?.focus()}
               placeholder="0"
-              style={{...S.inp, width:100, textAlign:'right', fontWeight:700, fontSize:15}}
-            />
+              style={{...S.inp, width:100, textAlign:'right', fontWeight:700, fontSize:15}} />
           </div>
 
           {/* 메모 */}
           <div style={{...S.field, flex:2}}>
-            <label style={S.label}>메모 <span style={{fontWeight:400,color:'#94a3b8'}}>(선택)</span></label>
+            <label style={S.label}>메모</label>
             <input ref={memoRef} type="text" value={form.memo}
               onChange={e => setF('memo', e.target.value)}
-              onKeyDown={e => handleKeyDown(e, null)}
+              onKeyDown={e => e.key==='Enter' && handleSave()}
               placeholder="메모 입력"
-              style={{...S.inp, flex:1}}
-            />
+              style={{...S.inp, flex:1}} />
           </div>
 
           {/* 저장 */}
           <div style={{...S.field, justifyContent:'flex-end'}}>
             <label style={{...S.label, opacity:0}}>·</label>
-            <button onClick={handleSave} disabled={!isReady || saving}
+            <button onClick={handleSave} disabled={!isReady||saving}
               style={{...S.saveBtn,
-                background: saved ? '#16a34a' : isReady ? '#1e40af' : '#cbd5e1',
-                cursor: isReady ? 'pointer' : 'not-allowed'}}>
-              {saved ? '✓ 저장됨' : saving ? '저장 중' : '저장  ↵'}
+                background: saved?'#16a34a': isReady?'#1e40af':'#cbd5e1',
+                cursor: isReady?'pointer':'not-allowed'}}>
+              {saved?'✓ 저장됨': saving?'저장 중':'저장  ↵'}
             </button>
           </div>
         </div>
 
-        {/* 힌트 바 */}
+        {/* 힌트 */}
         <div style={S.hintBar}>
-          {foundItem ? (
+          {item ? (
             <span>
               <span style={{color:'#94a3b8'}}>1SET 필요수량</span>
-              <strong style={{color:'#1e40af',margin:'0 6px'}}>{foundItem.needPerSet} EA</strong>
+              <strong style={{color:'#1e40af', margin:'0 6px'}}>{item.needPerSet} EA</strong>
               {form.quantity > 0 && (
                 <span style={{color:'#94a3b8'}}>
-                  · 입고 수량 기준 <strong style={{color:'#059669'}}>{Math.floor(Number(form.quantity)/foundItem.needPerSet).toLocaleString()} SET</strong> 분량
+                  · 입고 수량 기준 <strong style={{color:'#059669'}}>{Math.floor(Number(form.quantity)/item.needPerSet).toLocaleString()} SET</strong> 분량
                 </span>
               )}
             </span>
           ) : (
-            <span style={{color:'#cbd5e1'}}>
-              {mode === 'text' ? '⌨  날짜 → 품목코드(A1~A29) → 수량 → 메모 순서로 입력 후 Enter' : '품목을 선택하세요'}
-            </span>
+            <span style={{color:'#cbd5e1'}}>날짜 → 품목코드(숫자만 입력 가능) → 수량 → 메모 → Enter</span>
           )}
         </div>
       </div>
 
-      {/* ── 기록 테이블 ── */}
+      {/* 기록 테이블 */}
       <div style={S.card}>
         <div style={S.cardHead}>
           <span style={S.cardTitle}>입고 기록</span>
@@ -247,39 +188,31 @@ export default function InboundManage({ transactions }) {
               <tr>
                 {['날짜','코드','품목명','수량 (EA)','메모',''].map((h,i) => (
                   <th key={i} style={{...S.th, textAlign:i===3?'right':'left',
-                    width:i===0?110:i===1?70:i===3?100:i===5?80:'auto'}}>{h}</th>
+                    width:i===0?110:i===1?65:i===3?100:i===5?90:'auto'}}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {inbounds.map((tx, i) => {
-                const isEdit = editId === tx.id
+              {inbounds.map((tx,i) => {
+                const isEdit = editId===tx.id
                 return (
                   <tr key={tx.id}
-                    style={{background: isEdit?'#eff6ff':i%2===0?'#f8fafc':'#fff', cursor:isEdit?'default':'pointer'}}
-                    onClick={() => !isEdit && startEdit(tx)}>
+                    style={{background:isEdit?'#eff6ff':i%2===0?'#f8fafc':'#fff', cursor:isEdit?'default':'pointer'}}
+                    onClick={() => !isEdit && (setEditId(tx.id), setEditData({date:tx.date,itemCode:tx.itemCode,quantity:tx.quantity,memo:tx.memo||''}))}>
                     <td style={{...S.td,fontSize:12,color:'#475569'}}>
-                      {isEdit
-                        ? <input type="text" value={editData.date} onChange={e=>setEditData({...editData,date:e.target.value})} style={S.tdInp}/>
-                        : tx.date}
+                      {isEdit ? <input type="text" value={editData.date} onChange={e=>setEditData({...editData,date:e.target.value})} style={S.tdInp}/> : tx.date}
                     </td>
                     <td style={S.td}>
-                      {isEdit
-                        ? <input type="text" value={editData.itemCode} onChange={e=>setEditData({...editData,itemCode:e.target.value.toUpperCase()})} style={{...S.tdInp,width:60,textTransform:'uppercase'}}/>
-                        : <span style={S.codeTag}>{tx.itemCode}</span>}
+                      {isEdit ? <input type="text" value={editData.itemCode} onChange={e=>setEditData({...editData,itemCode:e.target.value.toUpperCase()})} style={{...S.tdInp,width:60}}/> : <span style={S.codeTag}>{tx.itemCode}</span>}
                     </td>
                     <td style={{...S.td,fontSize:12,color:'#374151'}}>
                       {isEdit ? ITEM_MAP[editData.itemCode]||'—' : tx.itemName}
                     </td>
                     <td style={{...S.td,textAlign:'right'}}>
-                      {isEdit
-                        ? <input type="number" value={editData.quantity} onChange={e=>setEditData({...editData,quantity:e.target.value})} style={{...S.tdInp,textAlign:'right',width:80}}/>
-                        : <span style={{fontWeight:700,fontVariantNumeric:'tabular-nums'}}>{tx.quantity.toLocaleString()}</span>}
+                      {isEdit ? <input type="number" value={editData.quantity} onChange={e=>setEditData({...editData,quantity:e.target.value})} style={{...S.tdInp,textAlign:'right',width:80}}/> : <span style={{fontWeight:700}}>{tx.quantity.toLocaleString()}</span>}
                     </td>
                     <td style={{...S.td,fontSize:12,color:'#64748b'}}>
-                      {isEdit
-                        ? <input type="text" value={editData.memo} onChange={e=>setEditData({...editData,memo:e.target.value})} style={S.tdInp}/>
-                        : tx.memo||''}
+                      {isEdit ? <input type="text" value={editData.memo} onChange={e=>setEditData({...editData,memo:e.target.value})} style={S.tdInp}/> : tx.memo||''}
                     </td>
                     <td style={S.td} onClick={e=>e.stopPropagation()}>
                       {isEdit ? (
@@ -303,36 +236,28 @@ export default function InboundManage({ transactions }) {
 }
 
 const S = {
-  wrap: {display:'flex',flexDirection:'column',gap:16,height:'100%'},
-
-  inputCard:  {background:'#fff',borderRadius:10,border:'1px solid #e2e8f0',padding:'16px 20px'},
-  inputLabel: {fontSize:11,fontWeight:700,color:'#94a3b8',letterSpacing:1,textTransform:'uppercase'},
-
-
-  inputRow:  {display:'flex',gap:12,alignItems:'flex-end',flexWrap:'wrap'},
-  field:     {display:'flex',flexDirection:'column',gap:5},
+  wrap:      {display:'flex',flexDirection:'column',gap:12,height:'100%'},
+  inputCard: {background:'#fff',borderRadius:10,border:'1px solid #e2e8f0',padding:'14px 18px',flexShrink:0},
+  inputLabel:{fontSize:11,fontWeight:700,color:'#94a3b8',letterSpacing:1,textTransform:'uppercase',marginBottom:10},
+  inputRow:  {display:'flex',gap:10,alignItems:'flex-end',flexWrap:'wrap'},
+  field:     {display:'flex',flexDirection:'column',gap:4},
   label:     {fontSize:11,fontWeight:600,color:'#64748b',letterSpacing:0.3},
-  foundName: {color:'#16a34a',fontWeight:700,fontSize:11},
-  notFound:  {color:'#dc2626',fontWeight:700,fontSize:11},
-  inp:       {padding:'8px 11px',border:'1.5px solid #e2e8f0',borderRadius:7,fontSize:13,fontFamily:'inherit',outline:'none',color:'#1e293b',transition:'border 0.1s'},
-  saveBtn:   {padding:'9px 22px',color:'#fff',border:'none',borderRadius:7,fontSize:13,fontWeight:700,fontFamily:'inherit',whiteSpace:'nowrap',transition:'background 0.15s'},
-
-  suggest:     {position:'absolute',top:'100%',left:0,zIndex:100,background:'#fff',border:'1px solid #e2e8f0',borderRadius:7,boxShadow:'0 4px 16px rgba(0,0,0,0.1)',minWidth:280,marginTop:4},
+  inp:       {padding:'8px 11px',border:'1.5px solid #e2e8f0',borderRadius:7,fontSize:13,fontFamily:'inherit',outline:'none',color:'#1e293b'},
+  saveBtn:   {padding:'9px 20px',color:'#fff',border:'none',borderRadius:7,fontSize:13,fontWeight:700,fontFamily:'inherit',whiteSpace:'nowrap'},
+  hintBar:   {marginTop:8,fontSize:12,color:'#64748b',minHeight:16},
+  suggest:     {position:'absolute',top:'100%',left:0,zIndex:200,background:'#fff',border:'1px solid #e2e8f0',borderRadius:8,boxShadow:'0 4px 16px rgba(0,0,0,0.1)',minWidth:300,marginTop:4},
   suggestItem: {padding:'8px 14px',cursor:'pointer',fontSize:13,display:'flex',alignItems:'center'},
-
-  hintBar: {marginTop:10,fontSize:12,color:'#64748b',minHeight:18},
-
-  card:     {background:'#fff',borderRadius:10,border:'1px solid #e2e8f0',display:'flex',flexDirection:'column',flex:1,minHeight:0,overflow:'hidden'},
-  cardHead: {padding:'12px 18px',borderBottom:'1px solid #f1f5f9',display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0},
-  cardTitle:{fontSize:13,fontWeight:700,color:'#0f172a'},
-  cardSub:  {fontSize:11,color:'#94a3b8'},
-  tableWrap:{overflowY:'auto',flex:1},
-  table:    {width:'100%',borderCollapse:'collapse'},
-  th:       {background:'#1e293b',color:'#94a3b8',padding:'9px 14px',fontSize:11,fontWeight:700,position:'sticky',top:0,letterSpacing:0.8,whiteSpace:'nowrap'},
-  td:       {padding:'7px 14px',fontSize:13,color:'#1e293b',borderBottom:'1px solid #f1f5f9',verticalAlign:'middle'},
-  tdInp:    {padding:'4px 7px',border:'1.5px solid #3b82f6',borderRadius:4,fontSize:12,fontFamily:'inherit',outline:'none',width:'100%'},
-  codeTag:  {background:'#eff6ff',color:'#1e40af',padding:'2px 8px',borderRadius:4,fontSize:11,fontWeight:800},
-  smSave:   {padding:'4px 10px',background:'#1e40af',color:'#fff',border:'none',borderRadius:4,cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:'inherit'},
-  smCancel: {padding:'4px 9px',background:'#f1f5f9',color:'#475569',border:'none',borderRadius:4,cursor:'pointer',fontSize:11,fontFamily:'inherit'},
-  smDel:    {padding:'4px 9px',background:'#fee2e2',color:'#dc2626',border:'none',borderRadius:4,cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:'inherit'},
+  card:      {background:'#fff',borderRadius:10,border:'1px solid #e2e8f0',display:'flex',flexDirection:'column',flex:1,minHeight:0,overflow:'hidden'},
+  cardHead:  {padding:'10px 16px',borderBottom:'1px solid #f1f5f9',display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0},
+  cardTitle: {fontSize:13,fontWeight:700,color:'#0f172a'},
+  cardSub:   {fontSize:11,color:'#94a3b8'},
+  tableWrap: {overflowY:'auto',flex:1},
+  table:     {width:'100%',borderCollapse:'collapse'},
+  th:        {background:'#1e293b',color:'#94a3b8',padding:'9px 12px',fontSize:11,fontWeight:700,position:'sticky',top:0,letterSpacing:0.5,whiteSpace:'nowrap'},
+  td:        {padding:'7px 12px',fontSize:13,color:'#1e293b',borderBottom:'1px solid #f1f5f9',verticalAlign:'middle'},
+  tdInp:     {padding:'4px 7px',border:'1.5px solid #3b82f6',borderRadius:4,fontSize:12,fontFamily:'inherit',outline:'none',width:'100%'},
+  codeTag:   {background:'#eff6ff',color:'#1e40af',padding:'1px 7px',borderRadius:4,fontSize:11,fontWeight:800},
+  smSave:    {padding:'4px 10px',background:'#1e40af',color:'#fff',border:'none',borderRadius:4,cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:'inherit'},
+  smCancel:  {padding:'4px 9px',background:'#f1f5f9',color:'#475569',border:'none',borderRadius:4,cursor:'pointer',fontSize:11,fontFamily:'inherit'},
+  smDel:     {padding:'4px 9px',background:'#fee2e2',color:'#dc2626',border:'none',borderRadius:4,cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:'inherit'},
 }
