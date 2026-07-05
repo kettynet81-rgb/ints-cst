@@ -58,6 +58,9 @@ export default function InboundManage({ transactions }) {
 
   // 코드 입력 시 대문자 변환 + 매칭되면 수량으로 이동
   const handleCodeChange = (v) => {
+    // 숫자만 입력하면 A 자동 추가
+    let val = v.toUpperCase()
+    if (/^\d+$/.test(val)) val = 'A' + val
     const upper = v.toUpperCase()
     setF('itemCode', upper)
     const match = ITEMS.find(i => i.code === upper)
