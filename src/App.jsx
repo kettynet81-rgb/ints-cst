@@ -61,7 +61,7 @@ function MainApp() {
         <div style={S.logoArea}>
           <button style={S.logoBtn} onClick={()=>setPage('dashboard')} title="홈으로">
             <img src="/ints-logo.png" alt="INTS"
-              style={{height:28,objectFit:'contain',display:'block',filter:'brightness(0) invert(1)'}}
+              style={{height:26,objectFit:'contain',display:'block',borderRadius:4,padding:'2px 4px',background:'#fff'}}
               onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}}
             />
             <div style={{display:'none',width:32,height:32,background:'linear-gradient(135deg,#3b82f6,#1e40af)',borderRadius:8,alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:900,color:'#fff'}}>IN</div>
