@@ -227,6 +227,6 @@ function Dot({color,label}) {
 
 const S = {
   div: {width:1,height:20,background:'#e2e8f0',flexShrink:0},
-  th:  {background:'#1e293b',color:'#94a3b8',padding:'8px 10px',fontSize:10,fontWeight:700,position:'sticky',top:0,letterSpacing:0.5,whiteSpace:'nowrap'},
+  th:  {background:'#1e293b',color:'#e2e8f0',padding:'8px 10px',fontSize:10,fontWeight:700,position:'sticky',top:0,letterSpacing:0.5,whiteSpace:'nowrap'},
   td:  {padding:'8px 10px',fontSize:12,color:'#1e293b',borderBottom:'1px solid #f1f5f9',verticalAlign:'middle'},
 }
