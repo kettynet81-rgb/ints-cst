@@ -1,9 +1,11 @@
+import { downloadStockExcel } from '../utils/excel'
 import { useState, useMemo } from 'react'
 import { ITEMS } from '../data/items'
 
 export default function Dashboard({ transactions, stockMap }) {
   const [simQty,  setSimQty]  = useState('')
   const [hoverRow, setHoverRow] = useState(null)
+  const todayStr = new Date().toISOString().slice(0,10).replace(/-/g,'')
   const [baseQty,  setBaseQty]  = useState('112')
   const [lowQty,   setLowQty]   = useState('80')
 
@@ -50,6 +52,11 @@ export default function Dashboard({ transactions, stockMap }) {
           </div>
           <div style={{display:'flex',alignItems:'center',gap:10}}>
 
+            <button onClick={()=>downloadStockExcel(itemStats, base, todayStr)}
+              style={{padding:'4px 12px',background:'#16a34a',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontFamily:'inherit',fontWeight:700,fontSize:12}}>
+              ⬇ 엑셀
+            </button>
+            <div style={S.div}/>
             {/* 발주기준 */}
             <div style={{display:'flex',alignItems:'center',gap:5}}>
               <span style={{fontSize:11,color:'#94a3b8'}}>발주기준</span>

@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { collection, onSnapshot, orderBy, query, limit } from 'firebase/firestore'
+import { downloadHistoryExcel } from '../utils/excel'
 import { db } from '../firebase'
 
 const parseDate = (v) => {
@@ -96,6 +97,10 @@ export default function History({ transactions }) {
               <span style={{fontSize:12,fontWeight:600,color:'#1d4ed8',background:'#dbeafe',padding:'3px 10px',borderRadius:20}}>입고 {totalIn.toLocaleString()} EA</span>
               <span style={{fontSize:12,fontWeight:600,color:'#ea580c',background:'#ffedd5',padding:'3px 10px',borderRadius:20}}>출고 {totalOut.toLocaleString()} EA</span>
               <span style={{fontSize:12,color:'#475569'}}>{filtered.length}건</span>
+              <button onClick={()=>downloadHistoryExcel(filtered, new Date().toISOString().slice(0,10).replace(/-/g,''))}
+                style={{padding:'4px 12px',background:'#16a34a',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontFamily:'inherit',fontWeight:700,fontSize:12}}>
+                ⬇ 엑셀
+              </button>
             </div>
           </div>
 
