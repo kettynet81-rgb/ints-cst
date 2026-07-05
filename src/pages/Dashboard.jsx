@@ -22,7 +22,7 @@ export default function Dashboard({ transactions, stockMap }) {
     const shortage   = sim > 0 ? Math.max(0, required - stock) : 0
     const simStatus  = sim > 0 ? (shortage > 0 ? 'short' : 'ok') : null
     return { ...item, stock, assemblable, status, surplus, required, shortage, simStatus }
-  }), [stockMap, base, sim])
+  }), [stockMap, base, sim, low])
 
   const minSet     = Math.min(...itemStats.map(i => i.assemblable))
   const emptyCount = itemStats.filter(i => i.status === 'empty').length
