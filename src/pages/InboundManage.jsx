@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
-import { collection, addDoc, deleteDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore'
+import { collection, addDoc, deleteDoc, doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore'
 import { db } from '../firebase'
+import { useAuth } from '../contexts/AuthContext'
 import { ITEMS } from '../data/items'
 
 const ITEM_MAP = Object.fromEntries(ITEMS.map(i => [i.code, i.name]))
@@ -25,6 +26,8 @@ export default function InboundManage({ transactions }) {
   const [form, setForm]     = useState({ date:'', itemCode:'', quantity:'', memo:'' })
   const [saving, setSaving] = useState(false)
   const [saved,  setSaved]  = useState(false)
+  const { userData } = useAuth()
+
   const [editId, setEditId] = useState(null)
   const [editData, setEditData] = useState({})
   const [deleting, setDel]  = useState(null)
@@ -63,17 +66,37 @@ export default function InboundManage({ transactions }) {
   }
 
   const saveEdit = async () => {
-    await updateDoc(doc(db, 'transactions', editId), {
-      date:editData.date, itemCode:editData.itemCode,
-      itemName:ITEM_MAP[editData.itemCode]||'',
-      quantity:Number(editData.quantity), memo:editData.memo,
+    const before = inbounds.find(t => t.id === editId)
+    const after = { date:editData.date, itemCode:editData.itemCode, itemName:ITEM_MAP[editData.itemCode]||'', quantity:Number(editData.quantity), memo:editData.memo }
+    await updateDoc(doc(db, 'transactions', editId), after)
+    // 변경 로그 저장
+    await addDoc(collection(db, 'logs'), {
+      action: '수정',
+      target: '입고기록',
+      docId: editId,
+      before: { date:before?.date, itemCode:before?.itemCode, itemName:before?.itemName, quantity:before?.quantity, memo:before?.memo||'' },
+      after,
+      user: userData?.name || '알수없음',
+      createdAt: serverTimestamp(),
     })
     setEditId(null)
   }
 
   const deleteRow = async (id) => {
     if (!window.confirm('삭제하시겠습니까?')) return
-    setDel(id); await deleteDoc(doc(db,'transactions',id)); setDel(null)
+    const target = inbounds.find(t => t.id === id)
+    setDel(id)
+    await addDoc(collection(db, 'logs'), {
+      action: '삭제',
+      target: '입고기록',
+      docId: id,
+      before: { date:target?.date, itemCode:target?.itemCode, itemName:target?.itemName, quantity:target?.quantity, memo:target?.memo||'' },
+      after: null,
+      user: userData?.name || '알수없음',
+      createdAt: serverTimestamp(),
+    })
+    await deleteDoc(doc(db,'transactions',id))
+    setDel(null)
   }
 
   const item = ITEMS.find(i => i.code === form.itemCode.trim().toUpperCase())
