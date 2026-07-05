@@ -188,14 +188,14 @@ export default function Dashboard({ transactions, stockMap }) {
 
 function SumItem({ label, value, color }) {
   return (
-    <div style={{display:'flex',flexDirection:'column',gap:3,padding:'0 20px'}}>
-      <span style={{fontSize:10,color:'#94a3b8',fontWeight:600,letterSpacing:0.5}}>{label}</span>
-      <span style={{fontSize:18,fontWeight:800,color}}>{value}</span>
+    <div style={{display:'flex',flexDirection:'column',gap:1,padding:'0 16px'}}>
+      <span style={{fontSize:10,color:'#94a3b8',fontWeight:600,letterSpacing:0.3}}>{label}</span>
+      <span style={{fontSize:15,fontWeight:800,color}}>{value}</span>
     </div>
   )
 }
 function Badge({ c, bg, t }) {
-  return <span style={{background:bg,color:c,padding:'3px 10px',borderRadius:4,fontSize:11,fontWeight:700,whiteSpace:'nowrap',display:'inline-block'}}>{t}</span>
+  return <span style={{background:bg,color:c,padding:'2px 8px',borderRadius:4,fontSize:10,fontWeight:700,whiteSpace:'nowrap',display:'inline-block'}}>{t}</span>
 }
 function LegendDot({ color, label }) {
   return (
@@ -207,25 +207,25 @@ function LegendDot({ color, label }) {
 }
 
 const S = {
-  wrap: {display:'flex',flexDirection:'column',gap:16,height:'100%'},
+  wrap: {display:'flex',flexDirection:'column',gap:8,height:'100%'},
 
-  summaryBar: {background:'#fff',borderRadius:10,border:'1px solid #e2e8f0',padding:'14px 20px',display:'flex',alignItems:'center'},
+  summaryBar: {background:'#fff',borderRadius:8,border:'1px solid #e2e8f0',padding:'8px 16px',display:'flex',alignItems:'center'},
   sumDiv:     {width:1,height:32,background:'#e2e8f0',flexShrink:0},
 
   simInputWrap: {display:'flex',alignItems:'center',gap:4},
-  simInput: {width:80,padding:'7px 10px',border:'2px solid #3b82f6',borderRadius:7,fontSize:14,fontWeight:700,textAlign:'center',fontFamily:'inherit',outline:'none',color:'#1e293b'},
+  simInput: {width:70,padding:'4px 8px',border:'2px solid #3b82f6',borderRadius:6,fontSize:13,fontWeight:700,textAlign:'center',fontFamily:'inherit',outline:'none',color:'#1e293b'},
   simOk:    {fontSize:12,fontWeight:700,color:'#16a34a',background:'#dcfce7',padding:'4px 12px',borderRadius:20},
   simNg:    {fontSize:12,fontWeight:700,color:'#dc2626',background:'#fee2e2',padding:'4px 12px',borderRadius:20},
   simClear: {background:'none',border:'none',color:'#94a3b8',cursor:'pointer',fontSize:16,padding:'0 4px'},
 
   card:     {background:'#fff',borderRadius:10,border:'1px solid #e2e8f0',display:'flex',flexDirection:'column',flex:1,minHeight:0,overflow:'hidden'},
-  cardHead: {padding:'13px 18px',borderBottom:'1px solid #f1f5f9',display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0},
+  cardHead: {padding:'8px 14px',borderBottom:'1px solid #f1f5f9',display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0},
   cardTitle:{fontSize:14,fontWeight:700,color:'#0f172a'},
   cardSub:  {fontSize:11,color:'#94a3b8',marginTop:2},
 
   tableWrap:{overflowY:'auto',flex:1},
   table:    {width:'100%',borderCollapse:'collapse'},
-  th:       {background:'#1e293b',color:'#94a3b8',padding:'9px 12px',fontSize:11,fontWeight:700,position:'sticky',top:0,letterSpacing:0.5,whiteSpace:'nowrap'},
-  td:       {padding:'8px 12px',fontSize:13,color:'#1e293b',borderBottom:'1px solid #f1f5f9'},
-  codeTag:  {background:'#eff6ff',color:'#1e40af',padding:'2px 8px',borderRadius:4,fontSize:11,fontWeight:800},
+  th:       {background:'#1e293b',color:'#94a3b8',padding:'7px 12px',fontSize:10,fontWeight:700,position:'sticky',top:0,letterSpacing:0.5,whiteSpace:'nowrap'},
+  td:       {padding:'5px 12px',fontSize:12,color:'#1e293b',borderBottom:'1px solid #f1f5f9'},
+  codeTag:  {background:'#eff6ff',color:'#1e40af',padding:'1px 7px',borderRadius:4,fontSize:11,fontWeight:800},
 }
