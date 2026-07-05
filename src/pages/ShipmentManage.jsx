@@ -130,9 +130,19 @@ function ProductShipment({ transactions, stockMap }) {
     setEditPlanId(null)
   }
 
-  const deletePlan = async (id) => {
-    if (!window.confirm('출하 계획을 삭제하시겠습니까?')) return
-    setDel(id); await deleteDoc(doc(db, 'transactions', id)); setDel(null)
+  const deletePlan = async (plan) => {
+    if (!window.confirm('출하 계획을 삭제하시겠습니까?\n관련 출고 기록도 함께 삭제됩니다.')) return
+    setDel(plan.id)
+    const batch = writeBatch(db)
+    // 계획 문서 삭제
+    batch.delete(doc(db, 'transactions', plan.id))
+    // 관련 출고 기록 삭제 (shipmentId로 연결된 것)
+    if (plan.shipmentId) {
+      const related = transactions.filter(t => t.shipmentId === plan.shipmentId && t.type === '출고')
+      related.forEach(t => batch.delete(doc(db, 'transactions', t.id)))
+    }
+    await batch.commit()
+    setDel(null)
   }
 
   return (
@@ -258,7 +268,7 @@ function ProductShipment({ transactions, stockMap }) {
                             {confirming===plan.id?'처리중...':'출하 확정'}
                           </button>
                           <button style={S.smSave} onClick={()=>{setEditPlanId(plan.id);setEditPlan({date:plan.date,setQty:plan.setQty,memo:plan.memo||''})}}>수정</button>
-                          <button style={S.smDel} onClick={()=>deletePlan(plan.id)} disabled={deleting===plan.id}>삭제</button>
+                          <button style={S.smDel} onClick={()=>deletePlan(plan)} disabled={deleting===plan.id}>삭제</button>
                         </div>
                       )}
                     </td>
