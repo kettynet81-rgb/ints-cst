@@ -1,3 +1,14 @@
+const parseDate = (v) => {
+  const year = new Date().getFullYear()
+  v = (v||'').trim().replace(/\./g, '/')
+  const slash = v.match(/^(\d{1,2})\/(\d{1,2})$/)
+  if (slash) return `${year}-${slash[1].padStart(2,'0')}-${slash[2].padStart(2,'0')}`
+  const mmdd = v.match(/^(\d{2})(\d{2})$/)
+  if (mmdd) return `${year}-${mmdd[1]}-${mmdd[2]}`
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v
+  return v
+}
+
 import { useState, useMemo } from 'react'
 
 export default function History({ transactions }) {
