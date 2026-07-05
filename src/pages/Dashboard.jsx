@@ -81,10 +81,10 @@ export default function Dashboard({ transactions, stockMap }) {
           <table style={S.table}>
             <thead>
               <tr>
-                <th style={{...S.th, textAlign:'center', width:70}}>코드</th>
+                <th style={{...S.th, textAlign:'center', width:60}}>코드</th>
                 <th style={{...S.th, textAlign:'left'}}>품목명</th>
-                <th style={{...S.th, textAlign:'center', width:80}}>필요수량</th>
-                <th style={{...S.th, textAlign:'right', width:100}}>현재고</th>
+                <th style={{...S.th, textAlign:'center', width:70}}>필요</th>
+                <th style={{...S.th, textAlign:'right', width:90}}>현재고</th>
                 {sim > 0 ? (
                   <>
                     <th style={{...S.th, textAlign:'right', width:110, background:'#1e3a5c'}}>필요 ({sim}SET)</th>
@@ -93,8 +93,8 @@ export default function Dashboard({ transactions, stockMap }) {
                   </>
                 ) : (
                   <>
-                    <th style={{...S.th, textAlign:'center', width:100}}>조립가능 SET</th>
-                    <th style={{...S.th, textAlign:'center', width:90}}>상태</th>
+                    <th style={{...S.th, textAlign:'center', width:90}}>조립가능</th>
+                    <th style={{...S.th, textAlign:'center', width:80}}>상태</th>
                   </>
                 )}
               </tr>
@@ -195,7 +195,7 @@ function SumItem({ label, value, color }) {
   )
 }
 function Badge({ c, bg, t }) {
-  return <span style={{background:bg,color:c,padding:'3px 10px',borderRadius:4,fontSize:11,fontWeight:700}}>{t}</span>
+  return <span style={{background:bg,color:c,padding:'3px 10px',borderRadius:4,fontSize:11,fontWeight:700,whiteSpace:'nowrap',display:'inline-block'}}>{t}</span>
 }
 function LegendDot({ color, label }) {
   return (
@@ -225,7 +225,7 @@ const S = {
 
   tableWrap:{overflowY:'auto',flex:1},
   table:    {width:'100%',borderCollapse:'collapse'},
-  th:       {background:'#1e293b',color:'#94a3b8',padding:'10px 14px',fontSize:11,fontWeight:700,position:'sticky',top:0,letterSpacing:0.8,whiteSpace:'nowrap'},
-  td:       {padding:'9px 14px',fontSize:13,color:'#1e293b',borderBottom:'1px solid #f1f5f9'},
+  th:       {background:'#1e293b',color:'#94a3b8',padding:'9px 12px',fontSize:11,fontWeight:700,position:'sticky',top:0,letterSpacing:0.5,whiteSpace:'nowrap'},
+  td:       {padding:'8px 12px',fontSize:13,color:'#1e293b',borderBottom:'1px solid #f1f5f9'},
   codeTag:  {background:'#eff6ff',color:'#1e40af',padding:'2px 8px',borderRadius:4,fontSize:11,fontWeight:800},
 }
