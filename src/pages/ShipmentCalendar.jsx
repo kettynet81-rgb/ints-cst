@@ -38,6 +38,14 @@ export default function ShipmentCalendar({ transactions, stockMap = {} }) {
         if (!m[t.date]) m[t.date] = []
         m[t.date].push(t)
       })
+    // 각 날짜별 오전→오후 정렬
+    Object.keys(m).forEach(date => {
+      m[date].sort((a,b) => {
+        if (a.timeSlot==='오전' && b.timeSlot==='오후') return -1
+        if (a.timeSlot==='오후' && b.timeSlot==='오전') return 1
+        return 0
+      })
+    })
     return m
   }, [transactions])
 
