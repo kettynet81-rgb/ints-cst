@@ -3,6 +3,7 @@ import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, orderBy, que
 import { db } from '../firebase'
 import { useAuth } from '../contexts/AuthContext'
 import { writeLog } from '../utils/logger'
+import { downloadRecallTemplate, downloadRecallExcel } from '../utils/recallExcel'
 import * as XLSX from 'xlsx'
 
 const REPAIR_ITEMS = ['견시창 교체','반사판 교체','내부 볼트 파손','외부 볼트 파손','RFID 교체','파손','기타']
@@ -117,39 +118,9 @@ export default function RecallManage() {
     await updateDoc(doc(db,'recalls',r.id), { inDate: date })
   }
 
-  // ── 엑셀 다운로드 (현재 데이터)
-  const downloadExcel = () => {
-    const label = roundFilter !== '전체' ? roundFilter : '전체'
-    const data = [
-      ['NO','RFID NO','교체 항목','유·무상','차수','반출일','반입일','비고'],
-      ...filtered.map((r,i) => [
-        i+1, r.rfid,
-        (Array.isArray(r.repairItems)?r.repairItems:[r.repairItem||'']).join(', '),
-        r.payType, r.round, r.outDate||'', r.inDate||'', r.memo||''
-      ]),
-      [],
-      [`총 ${filtered.length}EA`, '', '', `유상 ${paidCount}  /  무상 ${freeCount}`]
-    ]
-    const ws = XLSX.utils.aoa_to_sheet(data)
-    ws['!cols'] = [{wch:5},{wch:12},{wch:28},{wch:8},{wch:8},{wch:12},{wch:12},{wch:20}]
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, '리콜현황')
-    XLSX.writeFile(wb, `CST_리콜현황_${label}_${new Date().toISOString().slice(0,10).replace(/-/g,'')}.xlsx`)
-  }
+  const downloadExcel = () => downloadRecallExcel(filtered, roundFilter)
 
-  // ── 빈 양식 다운로드
-  const downloadTemplate = () => {
-    const data = [
-      ['RFID NO','교체 항목','유·무상','차수','반출일','반입일','비고'],
-      ['IFZD412','견시창 교체','유상','12차','2026-07-07','','RFID 신형'],
-      ['IFZD413','내부 볼트 파손, 반사판 교체','무상','12차','2026-07-07','2026-07-10','신형TYPE'],
-    ]
-    const ws = XLSX.utils.aoa_to_sheet(data)
-    ws['!cols'] = [{wch:12},{wch:28},{wch:8},{wch:8},{wch:12},{wch:12},{wch:20}]
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, '입력양식')
-    XLSX.writeFile(wb, 'CST_리콜수리_입력양식.xlsx')
-  }
+  const downloadTemplate = () => downloadRecallTemplate()
 
   // ── 엑셀 업로드 → Firestore 저장
   const handleUpload = async (e) => {
