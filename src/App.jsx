@@ -37,7 +37,7 @@ function MainApp() {
       setTransactions(snap.docs.map(d => ({ id: d.id, ...d.data() })))
       setLoading(false)
     })
-  }, [currentUser])
+  }, [currentUser, userRole])
 
   const stockMap = useMemo(() => {
     const map = {}
@@ -54,8 +54,8 @@ function MainApp() {
     { id:'dashboard', icon:'◈', label:'재고 현황',  group:'재고관리' },
     { id:'inbound',   icon:'↑', label:'입고 관리',  group:'재고관리' },
     { id:'shipment',  icon:'↓', label:'출하 관리',  group:'재고관리' },
-    { id:'shipcal',   icon:'📅', label:'출하계획 관리', group:'재고관리' },
     { id:'history',   icon:'≡', label:'이력 조회',  group:'재고관리' },
+    { id:'shipcal',   icon:'📅', label:'출하계획 관리', group:'재고관리' },
     ...(userRole==='admin' ? [{ id:'admin', icon:'◉', label:'사용자 관리', group:'시스템' }] : []),
   ]
 
