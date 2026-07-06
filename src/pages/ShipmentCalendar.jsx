@@ -101,6 +101,61 @@ export default function ShipmentCalendar({ transactions }) {
     await writeLog({ action:'삭제', target:'출하계획', docId:p.id, before:{date:p.date,setQty:p.setQty}, user:userData?.name||'' })
   }
 
+
+  const handlePrint = () => {
+    const monthStr = `${year}년 ${MONTHS[month]}`
+    const rows = []
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = ds(d)
+      const plans = planMap[date] || []
+      if (plans.length > 0) rows.push({ date, plans })
+    }
+
+    const html = `<!DOCTYPE html><html><head>
+      <meta charset="utf-8"/>
+      <title>출하계획 ${monthStr}</title>
+      <style>
+        body { font-family: 'Malgun Gothic', sans-serif; padding: 20px; color: #111; }
+        h2 { text-align:center; font-size:18px; margin-bottom:4px; }
+        .sub { text-align:center; font-size:12px; color:#666; margin-bottom:16px; }
+        table { width:100%; border-collapse:collapse; font-size:12px; }
+        th { background:#1e293b; color:#fff; padding:7px 10px; text-align:left; }
+        td { padding:6px 10px; border-bottom:1px solid #e5e7eb; vertical-align:top; }
+        tr:nth-child(even) { background:#f8fafc; }
+        .tag { display:inline-block; padding:1px 6px; border-radius:3px; font-size:10px; font-weight:bold; margin-right:4px; }
+        .am { background:#dbeafe; color:#1e40af; }
+        .pm { background:#fef9c3; color:#854d0e; }
+        .confirmed { background:#dcfce7; color:#166534; }
+        .planned { background:#f1f5f9; color:#475569; }
+        @media print { body { padding:0; } }
+      </style>
+    </head><body>
+      <h2>📅 ${monthStr} 출하계획</h2>
+      <div class="sub">㈜아이엔티에스 · 총 ${rows.reduce((s,r)=>s+r.plans.reduce((ss,p)=>ss+(p.setQty||0),0),0).toLocaleString()} EA · 출력일: ${new Date().toLocaleDateString('ko-KR')}</div>
+      <table>
+        <thead><tr><th>출하일</th><th>수량 (EA)</th><th>시간</th><th>시리얼 범위</th><th>발주번호</th><th>상태</th><th>메모</th></tr></thead>
+        <tbody>
+          ${rows.map(r => r.plans.map(p => `
+            <tr>
+              <td>${r.date}${HOLIDAYS[r.date]?'<br><span style="color:#ef4444;font-size:10px">'+HOLIDAYS[r.date]+'</span>':''}</td>
+              <td style="font-weight:700;color:#1e40af">${(p.setQty||0).toLocaleString()}</td>
+              <td><span class="tag ${p.timeSlot==='오전'?'am':'pm'}">${p.timeSlot||'오전'}</span></td>
+              <td>${p.serial||'-'}</td>
+              <td>${p.orderNo||'-'}</td>
+              <td><span class="tag ${p.status==='confirmed'?'confirmed':'planned'}">${p.status==='confirmed'?'확정':'계획'}</span></td>
+              <td style="color:#6b7280;font-size:11px">${p.memo||''}</td>
+            </tr>`).join('')).join('')}
+        </tbody>
+      </table>
+    </body></html>`
+
+    const w = window.open('', '_blank', 'width=900,height=700')
+    w.document.write(html)
+    w.document.close()
+    w.focus()
+    setTimeout(() => w.print(), 300)
+  }
+
   // 엑셀 업로드 파싱
   const handleExcel = async (e) => {
     const file = e.target.files[0]
@@ -222,6 +277,10 @@ export default function ShipmentCalendar({ transactions }) {
               alert(`${targets.length}건 삭제 완료`)
             }} style={{...S.uploadBtn,background:'#fee2e2',borderColor:'#fca5a5',color:'#dc2626'}}>
               🗑 계획 전체삭제
+            </button>
+            <button onClick={handlePrint}
+              style={{...S.uploadBtn, background:'#1e293b', color:'#fff', border:'none', cursor:'pointer'}}>
+              🖨 인쇄
             </button>
             <label style={S.uploadBtn}>
               📂 엑셀 업로드
