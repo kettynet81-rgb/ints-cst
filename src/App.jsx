@@ -178,7 +178,7 @@ export default function App() {
 const S = {
   root: {display:'flex',height:'100vh',overflow:'hidden',background:'#f1f5f9'},
   sidebar: {background:'#0f172a',display:'flex',flexDirection:'column',flexShrink:0,transition:'width 0.2s',overflow:'hidden'},
-  logoArea: {padding:'10px 8px',display:'flex',alignItems:'center',gap:6,borderBottom:'1px solid #1e293b',flexShrink:0,background:'#fff',minWidth:0,overflow:'visible'},
+  logoArea: {height:50,padding:'0 8px',display:'flex',alignItems:'center',gap:6,borderBottom:'1px solid #1e293b',flexShrink:0,background:'#fff',minWidth:0,overflow:'visible',boxSizing:'border-box'},
   logoBtn:  {background:'none',border:'none',cursor:'pointer',padding:'2px 4px',borderRadius:6,flexShrink:0,display:'flex',alignItems:'center'},
   logoSub:  {fontSize:10,color:'#94a3b8',marginTop:1},
   collapseBtn:{marginLeft:'auto',background:'#f1f5f9',border:'1px solid #e2e8f0',borderRadius:5,color:'#374151',cursor:'pointer',fontSize:14,padding:'4px 7px',flexShrink:0,fontWeight:700},
