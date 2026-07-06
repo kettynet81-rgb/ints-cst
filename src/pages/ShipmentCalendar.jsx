@@ -360,16 +360,22 @@ export default function ShipmentCalendar({ transactions, stockMap = {} }) {
                 <div style={{fontWeight:isToday?700:500,fontSize:14}}>{d}</div>
                 {hw && <div style={{fontSize:9,color:'#ef4444',marginTop:1,lineHeight:1.2}}>{hw}</div>}
                 {totalQty > 0 && (
-                  <div style={{marginTop:3}}>
-                    <div style={{background:'#1e40af',color:'#fff',borderRadius:4,padding:'2px 5px',fontSize:10,fontWeight:700,textAlign:'center'}}>
+                  <div style={{marginTop:4}}>
+                    <div style={{background:'#1e40af',color:'#fff',borderRadius:4,padding:'3px 6px',fontSize:11,fontWeight:700,textAlign:'center',marginBottom:3}}>
                       {totalQty.toLocaleString()} EA
                     </div>
-                    {plans.slice(0,2).map((p,pi)=>(
-                      <div key={pi} style={{fontSize:9,color:'#374151',marginTop:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                        {p.timeSlot} {p.serial}
+                    {plans.map((p,pi)=>(
+                      <div key={pi} style={{fontSize:10,color:'#374151',marginTop:3,lineHeight:1.4,
+                        background:p.status==='confirmed'?'#f0fdf4':'#f8fafc',
+                        borderRadius:3,padding:'2px 5px',borderLeft:'2px solid',
+                        borderLeftColor:p.status==='confirmed'?'#16a34a':'#3b82f6'}}>
+                        <div style={{fontWeight:600,color:p.timeSlot==='오전'?'#1e40af':'#7c3aed'}}>
+                          {p.timeSlot} {p.setQty}EA {p.status==='confirmed'?'✓':''}
+                        </div>
+                        {p.serial&&<div style={{color:'#6b7280',fontSize:9}}>{p.serial}</div>}
+                        {p.orderNo&&<div style={{color:'#9ca3af',fontSize:9}}>발주 {p.orderNo}</div>}
                       </div>
                     ))}
-                    {plans.length>2&&<div style={{fontSize:9,color:'#9ca3af'}}>+{plans.length-2}건</div>}
                   </div>
                 )}
               </div>
@@ -511,8 +517,8 @@ const S = {
 
   grid7:   {display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:4},
   dayHead: {textAlign:'center',fontSize:12,fontWeight:600,padding:'6px 0'},
-  emptyCell:{minHeight:140},
-  cell:    {minHeight:140,borderRadius:7,padding:6,cursor:'pointer',transition:'box-shadow 0.1s',':hover':{boxShadow:'0 2px 8px rgba(0,0,0,0.1)'}},
+  emptyCell:{minHeight:120},
+  cell:    {minHeight:120,borderRadius:7,padding:6,cursor:'pointer',transition:'box-shadow 0.1s',':hover':{boxShadow:'0 2px 8px rgba(0,0,0,0.1)'}},
   legend:  {display:'flex',gap:16,marginTop:12,flexWrap:'wrap'},
   lgItem:  {display:'flex',alignItems:'center',gap:5,fontSize:11,color:'#6b7280'},
   lgDot:   {width:12,height:12,borderRadius:3,flexShrink:0},
