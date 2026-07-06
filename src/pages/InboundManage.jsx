@@ -190,7 +190,7 @@ export default function InboundManage({ transactions }) {
           <span style={S.cardTitle}>입고 기록</span>
           <span style={S.cardSub}>총 {inbounds.length}건 · 행 클릭하면 수정</span>
         </div>
-        <div style={{...S.tableWrap, maxWidth:860}}>
+        <div style={{...S.tableWrap, maxWidth:1100}}>
           <table style={{...S.table, tableLayout:'fixed'}}>
             <colgroup>
               <col style={{width:100}}/>
@@ -267,7 +267,7 @@ const S = {
   cardTitle: {fontSize:13,fontWeight:700,color:'#0f172a'},
   cardSub:   {fontSize:11,color:'#94a3b8'},
   tableWrap: {overflowY:'auto',flex:1},
-  table:     {width:'100%',maxWidth:860,borderCollapse:'collapse'},
+  table:     {width:'100%',maxWidth:1100,borderCollapse:'collapse'},
   th:        {background:'#1e293b',color:'#94a3b8',padding:'9px 12px',fontSize:11,fontWeight:700,position:'sticky',top:0,letterSpacing:0.5,whiteSpace:'nowrap'},
   td:        {padding:'7px 12px',fontSize:13,color:'#1e293b',borderBottom:'1px solid #f1f5f9',verticalAlign:'middle'},
   tdInp:     {padding:'4px 7px',border:'1.5px solid #3b82f6',borderRadius:4,fontSize:12,fontFamily:'inherit',outline:'none',width:'100%'},
