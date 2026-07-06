@@ -29,7 +29,6 @@ export default function Dashboard({ transactions, stockMap }) {
   const minSet     = Math.min(...itemStats.map(i => i.assemblable))
   const emptyCount = itemStats.filter(i => i.status === 'empty').length
   const lowCount   = itemStats.filter(i => i.status === 'low').length
-  const lowCount   = itemStats.filter(i => i.status === 'low').length
   const shortCount = itemStats.filter(i => i.simStatus === 'short').length
 
   return (
