@@ -22,6 +22,7 @@ export default function History({ transactions }) {
   const [dateTo,   setDateTo]   = useState('')
   const [logs, setLogs]         = useState([])
   const [sortField, setSortField] = useState('date')
+  const [expanded, setExpanded] = useState(new Set())
   const [sortDir,   setSortDir]   = useState('desc')
 
   // 수정 로그 실시간 로딩 (항상 구독)
@@ -31,6 +32,10 @@ export default function History({ transactions }) {
       setLogs(snap.docs.map(d => ({ id: d.id, ...d.data() })))
     })
   }, [])
+
+  const toggleExpand = (id) => setExpanded(s => {
+    const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n
+  })
 
   const toggleSort = (field) => {
     if (sortField === field) setSortDir(d => d==='desc'?'asc':'desc')
@@ -162,7 +167,20 @@ export default function History({ transactions }) {
                   <tr>
                     {['No','날짜','구분','코드','품목명','수량','메모'].map((h,i) => (
                       <th key={i} style={{...S.th, textAlign:i===4?'left':i===5?'right':'center'}}>{h}</th>
-                    ))}
+                    )}
+                  {tx.type==='제품출하' && expanded.has(tx.id) && tx._parts?.map((p,pi)=>(
+                    <tr key={`${tx.id}_${pi}`} style={{background:'#f5f3ff'}}>
+                      <td style={{...S.td,textAlign:'center',color:'#9ca3af',fontSize:11,paddingLeft:24}}>└</td>
+                      <td style={{...S.td,fontSize:11,color:'#7c3aed',paddingLeft:8}}>{p.date}</td>
+                      <td style={{...S.td,textAlign:'center'}}>
+                        <span style={{background:'#ede9fe',color:'#7c3aed',padding:'1px 6px',borderRadius:3,fontSize:10}}>부품</span>
+                      </td>
+                      <td style={{...S.td,fontSize:11,color:'#6b7280'}}>{p.itemCode}</td>
+                      <td style={{...S.td,fontSize:11,color:'#374151',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.itemName}</td>
+                      <td style={{...S.td,textAlign:'right',fontSize:11,color:'#374151'}}>{(p.quantity||0).toLocaleString()} EA</td>
+                      <td style={{...S.td,fontSize:11,color:'#9ca3af'}}>{p.memo||''}</td>
+                    </tr>
+                  ))}
                   </tr>
                 </thead>
                 <tbody>
