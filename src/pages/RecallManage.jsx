@@ -28,6 +28,9 @@ export default function RecallManage() {
   const [editId, setEditId] = useState(null)
   const [saving, setSaving] = useState(false)
   const [search, setSearch] = useState('')
+  const [dateType, setDateType] = useState('반출일')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
   const [loaded, setLoaded] = useState(false)
 
   useState(() => {
@@ -39,18 +42,34 @@ export default function RecallManage() {
     return unsub
   })
 
+  const roundInfo = useMemo(() => {
+    const m = {}
+    records.forEach(r => {
+      if (!r.round) return
+      if (!m[r.round]) m[r.round] = { outDates:[], inDates:[], paid:0, free:0 }
+      if (r.outDate) m[r.round].outDates.push(r.outDate)
+      if (r.inDate)  m[r.round].inDates.push(r.inDate)
+      if (r.payType==='유상') m[r.round].paid++
+      else m[r.round].free++
+    })
+    return m
+  }, [records])
+
   const rounds = useMemo(() => {
     const s = new Set(records.map(r => r.round).filter(Boolean))
-    return ['전체', ...Array.from(s).sort((a,b) => {
-      const na = parseInt(a), nb = parseInt(b)
-      return nb - na
-    })]
+    return ['전체', ...Array.from(s).sort((a,b) => parseInt(b)-parseInt(a))]
   }, [records])
 
   const filtered = useMemo(() => records
     .filter(r => roundFilter === '전체' || r.round === roundFilter)
     .filter(r => !search || r.rfid?.toLowerCase().includes(search.toLowerCase()) ||
       r.repairItem?.includes(search) || r.memo?.includes(search))
+    .filter(r => {
+      const d = dateType==='반출일' ? r.outDate : r.inDate
+      if (dateFrom && (!d || d < dateFrom)) return false
+      if (dateTo   && (!d || d > dateTo))   return false
+      return true
+    })
   , [records, roundFilter, search])
 
   const paidCount   = filtered.filter(r => r.payType === '유상').length
@@ -197,15 +216,42 @@ export default function RecallManage() {
 
       {/* 필터 */}
       <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
-        {rounds.map(r=>(
-          <button key={r} onClick={()=>setRoundFilter(r)}
-            style={{padding:'5px 12px',borderRadius:20,border:'1px solid',cursor:'pointer',fontSize:12,fontFamily:'inherit',fontWeight:600,
-              background:roundFilter===r?'#1e293b':'#fff',color:roundFilter===r?'#fff':'#374151',borderColor:roundFilter===r?'#1e293b':'#d1d5db'}}>
-            {r}
-          </button>
-        ))}
-        <input value={search} onChange={e=>setSearch(e.target.value)}
-          placeholder="RFID / 교체항목 검색" style={{...S.inp,width:200,marginLeft:'auto'}}/>
+        <div style={{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center',flex:1}}>
+          {rounds.map(r => {
+            const info = roundInfo[r]
+            const outMin = info?.outDates.length ? info.outDates.sort()[0] : null
+            const inMax  = info?.inDates.length  ? info.inDates.sort().at(-1) : null
+            return (
+              <button key={r} onClick={()=>setRoundFilter(r)}
+                style={{padding:'5px 12px',borderRadius:20,border:'1px solid',cursor:'pointer',fontSize:12,fontFamily:'inherit',fontWeight:600,
+                  background:roundFilter===r?'#1e293b':'#fff',color:roundFilter===r?'#fff':'#374151',
+                  borderColor:roundFilter===r?'#1e293b':'#d1d5db',lineHeight:1.4,textAlign:'left'}}>
+                <div>{r}</div>
+                {r!=='전체' && info && (
+                  <div style={{fontSize:9,opacity:0.8,fontWeight:400}}>
+                    {outMin&&outMin.slice(5)} {inMax?'~'+inMax.slice(5):'(미완료)'}
+                    {' · '}유{info.paid}/무{info.free}
+                  </div>
+                )}
+              </button>
+            )
+          })}
+        </div>
+
+        <div style={{display:'flex',gap:6,alignItems:'center',flexWrap:'wrap'}}>
+          <select value={dateType} onChange={e=>setDateType(e.target.value)} style={{...S.sel,fontSize:11,padding:'5px 7px'}}>
+            <option>반출일</option><option>반입일</option>
+          </select>
+          <input value={dateFrom} onChange={e=>setDateFrom(e.target.value)} placeholder="시작일"
+            style={{...S.inp,width:110,fontSize:11}} type="date"/>
+          <span style={{fontSize:11,color:'#9ca3af'}}>~</span>
+          <input value={dateTo} onChange={e=>setDateTo(e.target.value)} placeholder="종료일"
+            style={{...S.inp,width:110,fontSize:11}} type="date"/>
+          {(dateFrom||dateTo) && <button onClick={()=>{setDateFrom('');setDateTo('')}}
+            style={{fontSize:11,color:'#6b7280',background:'none',border:'1px solid #d1d5db',borderRadius:4,padding:'4px 8px',cursor:'pointer',fontFamily:'inherit'}}>초기화</button>}
+          <input value={search} onChange={e=>setSearch(e.target.value)}
+            placeholder="RFID / 교체항목 검색" style={{...S.inp,width:180}}/>
+        </div>
       </div>
 
       {/* 테이블 */}
