@@ -1,5 +1,3 @@
-import SideCalendar from './components/SideCalendar'
-import SideCalculator from './components/SideCalculator'
 import { useState, useEffect, useMemo } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore'
@@ -23,7 +21,6 @@ function MainApp() {
   const [loading, setLoading] = useState(true)
   const [sideCollapsed, setSideCollapsed] = useState(false)
   const [pendingCount, setPendingCount] = useState(0)
-  const [sidePanel, setSidePanel] = useState(null)
   const [toast, setToast] = useState(null)
   const [showPrint, setShowPrint] = useState(false)
 
@@ -102,36 +99,6 @@ function MainApp() {
             </div>
           ))}
         </nav>
-
-        {/* 달력/계산기 버튼 */}
-        {!sideCollapsed && (
-          <div style={{display:'flex',gap:4,padding:'0 8px 6px',flexShrink:0}}>
-            <button onClick={()=>setSidePanel(p=>p==='cal'?null:'cal')}
-              style={{flex:1,padding:'6px 4px',background:sidePanel==='cal'?'#1e40af':'#1e293b',
-                border:'none',borderRadius:6,color:sidePanel==='cal'?'#fff':'#94a3b8',
-                cursor:'pointer',fontSize:11,fontFamily:'inherit',fontWeight:600}}>
-              📅 달력
-            </button>
-            <button onClick={()=>setSidePanel(p=>p==='calc'?null:'calc')}
-              style={{flex:1,padding:'6px 4px',background:sidePanel==='calc'?'#1e40af':'#1e293b',
-                border:'none',borderRadius:6,color:sidePanel==='calc'?'#fff':'#94a3b8',
-                cursor:'pointer',fontSize:11,fontFamily:'inherit',fontWeight:600}}>
-              🧮 계산기
-            </button>
-          </div>
-        )}
-
-        {/* 패널 */}
-        {!sideCollapsed && sidePanel === 'cal' && (
-          <div style={{overflowY:'auto',maxHeight:'52vh',flexShrink:0}}>
-            <SideCalendar transactions={transactions} onNavigate={setPage}/>
-          </div>
-        )}
-        {!sideCollapsed && sidePanel === 'calc' && (
-          <div style={{flexShrink:0}}>
-            <SideCalculator/>
-          </div>
-        )}
 
         <div style={S.sideFooter}>
           <div style={{display:'flex',alignItems:'center',gap:6,marginBottom: sideCollapsed?0:8}}>
