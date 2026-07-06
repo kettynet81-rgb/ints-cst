@@ -45,6 +45,7 @@ export default function ShipmentManage({ transactions, stockMap }) {
    제품 출하 탭
 ──────────────────────────────────────────── */
 function ProductShipment({ transactions, stockMap }) {
+  const { userData } = useAuth()
   const plans = transactions
     .filter(t => t.type === '출하계획' && t.isHeader)
     .sort((a,b) => a.date.localeCompare(b.date))
@@ -294,6 +295,7 @@ function ProductShipment({ transactions, stockMap }) {
    부품 출고 탭
 ──────────────────────────────────────────── */
 function PartsOutbound({ transactions }) {
+  const { userData } = useAuth()
   const outbounds = transactions
     .filter(t => t.type==='출고' && !t.shipmentId)
     .sort((a,b) => b.date.localeCompare(a.date)||(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0))
