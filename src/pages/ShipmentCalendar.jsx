@@ -69,9 +69,9 @@ export default function ShipmentCalendar({ transactions, stockMap = {} }) {
     const issues = []
     const qty = plan.setQty || 0
 
-    // 수량 검사 (14의 배수가 아니면 경고, 500 초과면 오류)
-    if (qty > 500) issues.push({ level:'error', msg:`수량 이상: ${qty}EA (500EA 초과)` })
-    else if (qty % 14 !== 0) issues.push({ level:'warn', msg:`수량 비표준: ${qty}EA (14의 배수 아님)` })
+    // 수량 검사 - 표준 56EA 기준
+    if (qty > 300) issues.push({ level:'error', msg:`수량 오류: ${qty}EA (표준 56EA 대비 과다)` })
+    else if (qty !== 56) issues.push({ level:'warn', msg:`비표준 수량: ${qty}EA (표준 56EA)` })
 
     // RFID 범위 vs 수량 일치 검사
     if (plan.serial) {
