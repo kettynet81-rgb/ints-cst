@@ -82,13 +82,13 @@ export default function Dashboard({ transactions, stockMap }) {
         <div style={{overflowY:'auto',overflowX:'hidden',flex:1}}>
           <table style={{width:'100%',borderCollapse:'collapse',tableLayout:'fixed'}}>
             <colgroup>
-              <col style={{width:'5%'}}/>
-              <col/>
-              <col style={{width:'5%'}}/>
-              <col style={{width:'8%'}}/>
-              <col style={{width:'8%'}}/>
               <col style={{width:'7%'}}/>
-              <col style={{width:'9%'}}/>
+              <col style={{width:'38%'}}/>
+              <col style={{width:'6%'}}/>
+              <col style={{width:'12%'}}/>
+              <col style={{width:'12%'}}/>
+              <col style={{width:'10%'}}/>
+              <col style={{width:'15%'}}/>
             </colgroup>
 
             <thead>
