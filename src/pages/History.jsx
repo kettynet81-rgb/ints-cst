@@ -58,8 +58,13 @@ export default function History({ transactions }) {
       })
       .filter(t => {
         const q = search.toLowerCase()
+        const code = (t.itemCode||'').toLowerCase()
+        const isCodeQuery = /^a\d+(-\d+)?$/i.test(q)
+        const codeMatch = isCodeQuery
+          ? (code === q || code.startsWith(q + '-'))
+          : code.includes(q)
         const matchSearch = !q ||
-          (t.itemCode||'').toLowerCase().includes(q) ||
+          codeMatch ||
           (t.itemName||'').toLowerCase().includes(q) ||
           (t.memo||'').toLowerCase().includes(q)
         const matchType = typeFilter === '전체' || t.type === typeFilter
