@@ -42,8 +42,42 @@ export default function History({ transactions }) {
   const to   = parseDate(dateTo)
 
   const filtered = useMemo(() => {
-    return [...transactions]
-      .filter(t => t.type === '입고' || t.type === '출고')
+    // 제품출하(shipmentId 있는 출고)는 SET 단위로 묶기
+    const shipmentGroups = {}
+    const standaloneOut  = []
+    const inbound        = []
+
+    transactions.forEach(t => {
+      if (t.type === '입고') { inbound.push(t); return }
+      if (t.type === '출고') {
+        if (t.shipmentId) {
+          if (!shipmentGroups[t.shipmentId]) shipmentGroups[t.shipmentId] = []
+          shipmentGroups[t.shipmentId].push(t)
+        } else {
+          standaloneOut.push(t)
+        }
+      }
+    })
+
+    // shipmentId별로 대표 1행 생성
+    const shipmentRows = Object.entries(shipmentGroups).map(([sid, parts]) => {
+      const plan = transactions.find(t => t.type==='출하계획' && t.shipmentId===sid && t.isHeader)
+      const first = parts[0]
+      return {
+        id: sid,
+        type: '제품출하',
+        date: first.date,
+        itemCode: 'SET',
+        itemName: `CST SET 출하 (${parts.length}종 부품)`,
+        quantity: plan?.setQty || Math.round(parts.reduce((s,p)=>s+p.quantity,0)/parts.length),
+        memo: plan?.memo || '',
+        shipmentId: sid,
+        createdAt: first.createdAt,
+        _parts: parts,
+      }
+    })
+
+    return [...inbound, ...shipmentRows, ...standaloneOut]
       .sort((a,b) => {
         let va, vb
         if (sortField==='date') { va=a.date; vb=b.date }
@@ -105,7 +139,7 @@ export default function History({ transactions }) {
               {search && <button style={{background:'none',border:'none',color:'#94a3b8',cursor:'pointer'}} onClick={()=>setSearch('')}>✕</button>}
             </div>
             <div style={{display:'flex',gap:4}}>
-              {['전체','입고','출고'].map(t => (
+              {['전체','입고','제품출하','출고'].map(t => (
                 <button key={t} style={typeFilter===t?S.filterActive:S.filterBtn}
                   onClick={()=>setTypeFilter(t)}>{t}</button>
               ))}
