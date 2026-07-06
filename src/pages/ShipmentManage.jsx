@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { useAuth } from '../contexts/AuthContext'
 import { collection, addDoc, deleteDoc, doc, updateDoc, writeBatch, serverTimestamp, getDocs, query, where } from 'firebase/firestore'
 import { writeLog } from '../utils/logger'
 import { db } from '../firebase'

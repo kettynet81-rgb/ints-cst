@@ -27,7 +27,7 @@ export default function History({ transactions }) {
   // 수정 로그 실시간 로딩
   useEffect(() => {
     if (tab !== 'logs') return
-    const q = query(collection(db, 'logs'), orderBy('createdAt', 'desc'), limit(200))
+    const q = query(collection(db, 'logs'), orderBy('createdAt', 'desc'), limit(500))
     return onSnapshot(q, snap => {
       setLogs(snap.docs.map(d => ({ id: d.id, ...d.data() })))
     })
