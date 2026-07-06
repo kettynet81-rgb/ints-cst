@@ -203,7 +203,12 @@ export default function ShipmentCalendar({ transactions, stockMap = {} }) {
     const toDateStr = (v) => {
       if (!v) return null
       // ISO 문자열: "2026-05-31T00:00:00.000Z"
-      if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(v)) return v.slice(0,10)
+      // ISO 문자열: 브라우저(UTC+9)에서 2026-07-06T15:00:00.000Z → 2026-07-07로 보정
+      if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(v)) {
+        const d = new Date(v)
+        // 로컬 날짜로 변환 (한국 UTC+9 보정)
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+      }
       // 일반 날짜 문자열: "2026-05-31"
       if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v
       // Date 객체
