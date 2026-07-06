@@ -117,15 +117,25 @@ export default function ShipmentCalendar({ transactions, stockMap = {} }) {
   }
 
   const confirmShipment = async (plan) => {
-    const short = ITEMS.filter(i => (stockMap[i.code]||0) < i.needPerSet * plan.setQty)
-    if (short.length > 0) {
-      const ok = window.confirm(`⚠ 재고 부족 ${short.length}품목\n${short.slice(0,5).map(i=>`${i.code} (${i.needPerSet*plan.setQty-(stockMap[i.code]||0)}개 부족)`).join('\n')}\n\n그래도 출하 확정하시겠습니까?`)
-      if (!ok) return
+    const isPast = plan.date < new Date().toISOString().slice(0,10)
+    let deductStock = true
+
+    if (isPast) {
+      const choice = window.confirm(
+        `📅 ${plan.date} 과거 출하건입니다.\n\n[확인] 재고 차감 없이 확정만\n[취소] 재고도 함께 차감`
+      )
+      deductStock = !choice
     } else {
-      if (!window.confirm(`${plan.date} / ${plan.setQty}EA 출하 확정하시겠습니까?\n재고에서 자동 차감됩니다.`)) return
+      const short = ITEMS.filter(i => (stockMap[i.code]||0) < i.needPerSet * plan.setQty)
+      if (short.length > 0) {
+        const ok = window.confirm(`⚠ 재고 부족 ${short.length}품목\n${short.slice(0,5).map(i=>`${i.code} (${i.needPerSet*plan.setQty-(stockMap[i.code]||0)}개 부족)`).join('\n')}\n\n그래도 출하 확정하시겠습니까?`)
+        if (!ok) return
+      } else {
+        if (!window.confirm(`${plan.date} / ${plan.setQty}EA 출하 확정하시겠습니까?\n재고에서 자동 차감됩니다.`)) return
+      }
     }
     const batch = writeBatch(db)
-    for (const item of ITEMS) {
+    if (deductStock) for (const item of ITEMS) {
       batch.set(doc(collection(db,'transactions')), {
         type:'출고', itemCode:item.code, itemName:item.name,
         quantity: item.needPerSet * plan.setQty,
