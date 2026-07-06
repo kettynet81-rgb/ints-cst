@@ -104,8 +104,8 @@ export default function ShipmentCalendar({ transactions, stockMap = {} }) {
       const pmIdx = plans.findIndex(p=>p.timeSlot==='오후')
       if (amIdx > -1 && pmIdx > -1 && pmIdx < amIdx)
         issues.push({ level:'warn', msg:'오전/오후 순서 반전' })
-      // 각 계획 검사
-      plans.forEach(p => issues.push(...checkAnomaly(p)))
+      // 각 계획 검사 (acknowledged된 건 제외)
+      plans.forEach(p => { if (!p.acknowledged) issues.push(...checkAnomaly(p)) })
       if (issues.length) m[date] = issues
     })
     return m
