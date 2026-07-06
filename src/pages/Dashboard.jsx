@@ -17,12 +17,12 @@ export default function Dashboard({ transactions, stockMap }) {
     const stock      = stockMap[item.code] || 0
     const assemblable = Math.floor(stock / item.needPerSet)
     const surplus    = stock - item.needPerSet * base
-    const status     = stock === 0 ? 'empty' : assemblable < low ? 'low' : 'ok'
+    const status     = stock === 0 ? 'empty' : assemblable < base ? 'low' : 'ok'
     const required   = sim > 0 ? item.needPerSet * sim : 0
     const shortage   = sim > 0 ? Math.max(0, required - stock) : 0
     const simStatus  = sim > 0 ? (shortage > 0 ? 'short' : 'ok') : null
     return { ...item, stock, assemblable, status, surplus, required, shortage, simStatus }
-  }), [stockMap, base, sim, low])
+  }), [stockMap, base, sim])
 
   const minSet     = Math.min(...itemStats.map(i => i.assemblable))
   const emptyCount = itemStats.filter(i => i.status === 'empty').length
@@ -38,7 +38,7 @@ export default function Dashboard({ transactions, stockMap }) {
         <div style={S.div}/>
         <SumItem label="재고없음" value={`${emptyCount}품목`} color="#dc2626"/>
         <div style={S.div}/>
-        <SumItem label={`발주필요 (${lowQty}SET↓)`} value={`${lowCount}품목`} color="#d97706"/>
+        <SumItem label={`발주필요 (${baseQty||112}SET 기준)`} value={`${lowCount}품목`} color="#d97706"/>
       </div>
 
       {/* 테이블 카드 */}
