@@ -12,5 +12,5 @@ export async function writeLog({ action, target, docId, before = null, after = n
       user,
       createdAt: serverTimestamp(),
     })
-  } catch(e) { console.error('log error', e) }
+  } catch(e) { console.error('[writeLog 실패]', action, target, e.message) }
 }

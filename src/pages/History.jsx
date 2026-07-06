@@ -24,14 +24,13 @@ export default function History({ transactions }) {
   const [sortField, setSortField] = useState('date')
   const [sortDir,   setSortDir]   = useState('desc')
 
-  // 수정 로그 실시간 로딩
+  // 수정 로그 실시간 로딩 (항상 구독)
   useEffect(() => {
-    if (tab !== 'logs') return
     const q = query(collection(db, 'logs'), orderBy('createdAt', 'desc'), limit(500))
     return onSnapshot(q, snap => {
       setLogs(snap.docs.map(d => ({ id: d.id, ...d.data() })))
     })
-  }, [tab])
+  }, [])
 
   const toggleSort = (field) => {
     if (sortField === field) setSortDir(d => d==='desc'?'asc':'desc')
