@@ -57,6 +57,16 @@ export default function AdminPage() {
 
   return (
     <div style={{padding:28}}>
+      <div style={{marginBottom:16,padding:'12px 14px',background:'#fef9c3',border:'1px solid #fde68a',borderRadius:8,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div>
+          <div style={{fontSize:13,fontWeight:700,color:'#92400e'}}>🔧 데이터 마이그레이션</div>
+          <div style={{fontSize:11,color:'#a16207',marginTop:2}}>A1/A8/A14 기존 데이터를 A1-1/A8-1/A14-1 (좌)로 일괄 변경</div>
+        </div>
+        <button onClick={runMigration}
+          style={{padding:'7px 14px',background:'#d97706',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:'inherit'}}>
+          변경 실행
+        </button>
+      </div>
       <div style={{marginBottom:24}}>
         <div style={{fontSize:22,fontWeight:700,color:"#0f172a"}}>사용자 관리</div>
         <div style={{fontSize:13,color:"#64748b",marginTop:3}}>
