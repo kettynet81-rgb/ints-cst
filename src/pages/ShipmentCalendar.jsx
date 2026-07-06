@@ -117,14 +117,13 @@ export default function ShipmentCalendar({ transactions, stockMap = {} }) {
   }
 
   const confirmShipment = async (plan) => {
-    const isPast = plan.date < new Date().toISOString().slice(0,10)
-    let deductStock = true
+    const today = new Date()
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`
+    const isPast = plan.date < todayStr
+    let deductStock = !isPast
 
     if (isPast) {
-      const choice = window.confirm(
-        `📅 ${plan.date} 과거 출하건입니다.\n\n[확인] 재고 차감 없이 확정만\n[취소] 재고도 함께 차감`
-      )
-      deductStock = !choice
+      if (!window.confirm(`📅 ${plan.date} 과거 출하건\n재고 차감 없이 확정 처리됩니다.\n\n확정하시겠습니까?`)) return
     } else {
       const short = ITEMS.filter(i => (stockMap[i.code]||0) < i.needPerSet * plan.setQty)
       if (short.length > 0) {
