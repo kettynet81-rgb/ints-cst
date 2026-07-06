@@ -167,43 +167,47 @@ export default function History({ transactions }) {
                   <tr>
                     {['No','날짜','구분','코드','품목명','수량','메모'].map((h,i) => (
                       <th key={i} style={{...S.th, textAlign:i===4?'left':i===5?'right':'center'}}>{h}</th>
-                    )}
-                  {tx.type==='제품출하' && expanded.has(tx.id) && tx._parts?.map((p,pi)=>(
-                    <tr key={`${tx.id}_${pi}`} style={{background:'#f5f3ff'}}>
-                      <td style={{...S.td,textAlign:'center',color:'#9ca3af',fontSize:11,paddingLeft:24}}>└</td>
-                      <td style={{...S.td,fontSize:11,color:'#7c3aed',paddingLeft:8}}>{p.date}</td>
-                      <td style={{...S.td,textAlign:'center'}}>
-                        <span style={{background:'#ede9fe',color:'#7c3aed',padding:'1px 6px',borderRadius:3,fontSize:10}}>부품</span>
-                      </td>
-                      <td style={{...S.td,fontSize:11,color:'#6b7280'}}>{p.itemCode}</td>
-                      <td style={{...S.td,fontSize:11,color:'#374151',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.itemName}</td>
-                      <td style={{...S.td,textAlign:'right',fontSize:11,color:'#374151'}}>{(p.quantity||0).toLocaleString()} EA</td>
-                      <td style={{...S.td,fontSize:11,color:'#9ca3af'}}>{p.memo||''}</td>
-                    </tr>
-                  ))}
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.length===0 && (
                     <tr><td colSpan={7} style={{padding:40,textAlign:'center',color:'#94a3b8',fontSize:14}}>검색 결과가 없습니다</td></tr>
                   )}
-                  {filtered.map((tx,i) => (
-                    <tr key={tx.id||i} style={{background:i%2===0?'#f8fafc':'#fff'}}>
+                  {filtered.map((tx,i) => (<>
+                    <tr key={tx.id||i}
+                      onClick={()=>tx.type==='제품출하'&&toggleExpand(tx.id)}
+                      style={{background:i%2===0?'#f8fafc':'#fff',cursor:tx.type==='제품출하'?'pointer':'default',
+                        outline:tx.type==='제품출하'&&expanded.has(tx.id)?'2px solid #7c3aed':'none',outlineOffset:-1}}>
                       <td style={{...S.td,textAlign:'center',color:'#94a3b8',fontSize:11}}>{filtered.length-i}</td>
                       <td style={{...S.td,textAlign:'center',color:'#475569',whiteSpace:'nowrap'}}>{tx.date}</td>
                       <td style={{...S.td,textAlign:'center'}}>
-                        {tx.type==='입고'  && <span style={S.tagIn}>입고</span>}
-                        {tx.type==='출고'  && <span style={S.tagOut}>출고</span>}
-                        {tx.type==='출하계획' && <span style={S.tagShip}>출하</span>}
+                        {tx.type==='입고'    && <span style={S.tagIn}>입고</span>}
+                        {tx.type==='출고'    && <span style={S.tagOut}>출고</span>}
+                        {tx.type==='제품출하' && <span style={{...S.tagOut,background:'#7c3aed',color:'#fff'}}>제품출하</span>}
                       </td>
-                      <td style={{...S.td,textAlign:'center',fontWeight:700,color:'#1e40af'}}>{tx.itemCode||'SET'}</td>
+                      <td style={{...S.td,textAlign:'center',fontWeight:700,color:'#1e40af'}}>
+                        {tx.type==='제품출하' && <span style={{marginRight:4,fontSize:10,color:'#7c3aed'}}>{expanded.has(tx.id)?'▼':'▶'}</span>}
+                        {tx.itemCode||'SET'}
+                      </td>
                       <td style={S.td}>{tx.itemName||`CST ${tx.setQty}SET 출하`}</td>
                       <td style={{...S.td,textAlign:'right',fontWeight:700}}>
-                        {tx.type==='출하계획' ? `${tx.setQty} SET` : `${(tx.quantity||0).toLocaleString()} EA`}
+                        {tx.type==='제품출하'||tx.type==='출하계획' ? `${tx.quantity||tx.setQty} EA` : `${(tx.quantity||0).toLocaleString()} EA`}
                       </td>
                       <td style={{...S.td,color:'#64748b',fontSize:12}}>{tx.memo||''}</td>
                     </tr>
-                  ))}
+                    {tx.type==='제품출하' && expanded.has(tx.id) && tx._parts?.map((p,pi)=>(
+                      <tr key={`${tx.id}_${pi}`} style={{background:'#f5f3ff'}}>
+                        <td style={{...S.td,textAlign:'center',color:'#9ca3af',fontSize:11}}>└</td>
+                        <td style={{...S.td,fontSize:11,color:'#7c3aed',textAlign:'center'}}>{p.date}</td>
+                        <td style={{...S.td,textAlign:'center'}}><span style={{background:'#ede9fe',color:'#7c3aed',padding:'1px 6px',borderRadius:3,fontSize:10}}>부품</span></td>
+                        <td style={{...S.td,fontSize:11,color:'#6b7280',textAlign:'center'}}>{p.itemCode}</td>
+                        <td style={{...S.td,fontSize:11,color:'#374151',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.itemName}</td>
+                        <td style={{...S.td,textAlign:'right',fontSize:11}}>{(p.quantity||0).toLocaleString()} EA</td>
+                        <td style={{...S.td,fontSize:11,color:'#9ca3af'}}>{p.memo||''}</td>
+                      </tr>
+                    ))}
+                  </>))}
                 </tbody>
               </table>
             </div>
