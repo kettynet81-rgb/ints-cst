@@ -43,8 +43,7 @@ export default function History({ transactions }) {
 
   const filtered = useMemo(() => {
     return [...transactions]
-      .filter(t => t.type === '입고' || t.type === '출고' || t.type === '출하계획')
-      .filter(t => !(t.type === '출하계획' && !t.isHeader))
+      .filter(t => t.type === '입고' || t.type === '출고')
       .sort((a,b) => {
         let va, vb
         if (sortField==='date') { va=a.date; vb=b.date }
