@@ -15,7 +15,7 @@ const HOLIDAYS = {
 const DAYS   = ['일','월','화','수','목','금','토']
 const MONTHS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월']
 
-const EMPTY_FORM = { qty:'', serial:'', orderNo:'', timeSlot:'오전', memo:'' }
+const EMPTY_FORM = { qty:'', serial:'', orderNo:'', timeSlot:'오전', memo:'', _shipmentId:'' }
 
 export default function ShipmentCalendar({ transactions, stockMap = {} }) {
   const { userData } = useAuth()
@@ -152,9 +152,10 @@ export default function ShipmentCalendar({ transactions, stockMap = {} }) {
   const savePlan = async () => {
     if (!form.qty || Number(form.qty) <= 0) return
     setSaving(true)
+    const shipmentId = editId ? (form._shipmentId||`ship_${Date.now()}`) : `ship_${Date.now()}`
     const data = {
       type:'출하계획', isHeader:true,
-      shipmentId:`ship_${Date.now()}`,
+      shipmentId,
       date: modal.date,
       setQty: Number(form.qty),
       quantity: Number(form.qty),
@@ -164,10 +165,9 @@ export default function ShipmentCalendar({ transactions, stockMap = {} }) {
       memo: form.memo.trim(),
       status:'planned',
       itemCode:'SET', itemName:'CST SET 출하',
-      createdAt: serverTimestamp(),
     }
     if (editId) {
-      await updateDoc(doc(db,'transactions',editId), { ...data, createdAt: undefined })
+      await updateDoc(doc(db,'transactions',editId), data)
       await writeLog({ action:'수정', target:'출하계획', docId:editId, after:data, user:userData?.name||'' })
       setEditId(null)
     } else {
@@ -180,7 +180,7 @@ export default function ShipmentCalendar({ transactions, stockMap = {} }) {
 
   const startEdit = (p) => {
     setEditId(p.id)
-    setForm({ qty:String(p.setQty||''), serial:p.serial||'', orderNo:p.orderNo||'', timeSlot:p.timeSlot||'오전', memo:p.memo||'' })
+    setForm({ qty:String(p.setQty||''), serial:p.serial||'', orderNo:p.orderNo||'', timeSlot:p.timeSlot||'오전', memo:p.memo||'', _shipmentId:p.shipmentId||'' })
   }
 
   const deletePlan = async (p) => {
