@@ -407,8 +407,8 @@ const S = {
 
   grid7:   {display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:4},
   dayHead: {textAlign:'center',fontSize:12,fontWeight:600,padding:'6px 0'},
-  emptyCell:{minHeight:100},
-  cell:    {minHeight:100,borderRadius:7,padding:6,cursor:'pointer',transition:'box-shadow 0.1s',':hover':{boxShadow:'0 2px 8px rgba(0,0,0,0.1)'}},
+  emptyCell:{minHeight:140},
+  cell:    {minHeight:140,borderRadius:7,padding:6,cursor:'pointer',transition:'box-shadow 0.1s',':hover':{boxShadow:'0 2px 8px rgba(0,0,0,0.1)'}},
   legend:  {display:'flex',gap:16,marginTop:12,flexWrap:'wrap'},
   lgItem:  {display:'flex',alignItems:'center',gap:5,fontSize:11,color:'#6b7280'},
   lgDot:   {width:12,height:12,borderRadius:3,flexShrink:0},
