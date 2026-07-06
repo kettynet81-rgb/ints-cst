@@ -63,6 +63,51 @@ export default function ShipmentCalendar({ transactions, stockMap = {} }) {
   }
 
 
+
+  // 이상치 감지
+  const checkAnomaly = (plan) => {
+    const issues = []
+    const qty = plan.setQty || 0
+
+    // 수량 검사 (14의 배수가 아니면 경고, 500 초과면 오류)
+    if (qty > 500) issues.push({ level:'error', msg:`수량 이상: ${qty}EA (500EA 초과)` })
+    else if (qty % 14 !== 0) issues.push({ level:'warn', msg:`수량 비표준: ${qty}EA (14의 배수 아님)` })
+
+    // RFID 범위 vs 수량 일치 검사
+    if (plan.serial) {
+      const m = plan.serial.match(/([A-Z]+)(\d+)\s*[~～\-]\s*[A-Z]*(\d+)/)
+      if (m) {
+        const from = parseInt(m[2]), to = parseInt(m[3])
+        const rangeQty = to - from + 1
+        if (rangeQty !== qty) issues.push({ level:'warn', msg:`RFID 범위 불일치: ${m[1]}${m[2]}~${m[3]} = ${rangeQty}개, 수량 ${qty}EA` })
+      }
+    }
+
+    return issues
+  }
+
+  // 날짜별 이상치 목록
+  const anomalyMap = useMemo(() => {
+    const m = {}
+    Object.entries(planMap).forEach(([date, plans]) => {
+      const issues = []
+      // 오전/오후 순서 검사
+      const amIdx = plans.findLastIndex ? plans.findLastIndex(p=>p.timeSlot==='오전') : -1
+      const pmIdx = plans.findIndex(p=>p.timeSlot==='오후')
+      if (amIdx > -1 && pmIdx > -1 && pmIdx < amIdx)
+        issues.push({ level:'warn', msg:'오전/오후 순서 반전' })
+      // 각 계획 검사
+      plans.forEach(p => issues.push(...checkAnomaly(p)))
+      if (issues.length) m[date] = issues
+    })
+    return m
+  }, [planMap])
+
+  // 이상치 확인 완료 처리 (Firestore에 acknowledged 저장)
+  const acknowledgeAnomaly = async (plan) => {
+    await updateDoc(doc(db,'transactions',plan.id), { acknowledged: true })
+  }
+
   const confirmShipment = async (plan) => {
     const short = ITEMS.filter(i => (stockMap[i.code]||0) < i.needPerSet * plan.setQty)
     if (short.length > 0) {
@@ -292,7 +337,13 @@ export default function ShipmentCalendar({ transactions, stockMap = {} }) {
     fileRef.current.value = ''
   }
 
-  const modalPlans = modal ? (planMap[modal.date]||[]) : []
+  const modalPlans = modal
+    ? [...(planMap[modal.date]||[])].sort((a,b) => {
+        if (a.timeSlot==='오전' && b.timeSlot==='오후') return -1
+        if (a.timeSlot==='오후' && b.timeSlot==='오전') return 1
+        return 0
+      })
+    : []
   const isHoliday = (dateStr) => !!HOLIDAYS[dateStr]
   const hdName    = (dateStr) => HOLIDAYS[dateStr]||''
 
@@ -359,10 +410,16 @@ export default function ShipmentCalendar({ transactions, stockMap = {} }) {
                 style={{
                   ...S.cell,
                   background: isToday?'#eff6ff':'#fff',
-                  border: isToday?'2px solid #93c5fd':'1px solid #e5e7eb',
+                  border: anomalyMap[date]?.some(a=>a.level==='error') ? '2px solid #ef4444'
+                    : anomalyMap[date]?.some(a=>a.level==='warn') ? '2px solid #f59e0b'
+                    : isToday ? '2px solid #93c5fd' : '1px solid #e5e7eb',
                   color: hw||isSun?'#ef4444':isSat?'#2563eb':'#111827',
                 }}>
-                <div style={{fontWeight:isToday?700:500,fontSize:14}}>{d}</div>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                  <span style={{fontWeight:isToday?700:500,fontSize:14}}>{d}</span>
+                  {anomalyMap[date]?.some(a=>a.level==='error') && <span title={anomalyMap[date].map(a=>a.msg).join('\n')}>🔴</span>}
+                  {!anomalyMap[date]?.some(a=>a.level==='error') && anomalyMap[date]?.some(a=>a.level==='warn') && <span title={anomalyMap[date].map(a=>a.msg).join('\n')}>🟡</span>}
+                </div>
                 {hw && <div style={{fontSize:9,color:'#ef4444',marginTop:1,lineHeight:1.2}}>{hw}</div>}
                 {totalQty > 0 && (
                   <div style={{marginTop:4}}>
@@ -415,7 +472,23 @@ export default function ShipmentCalendar({ transactions, stockMap = {} }) {
                   <div key={p.id} style={S.planCard}>
                     <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
                       <div style={{flex:1}}>
-                        <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+                        {/* 이상치 알림 */}
+                    {checkAnomaly(p).map((issue,ii) => !p.acknowledged && (
+                      <div key={ii} style={{display:'flex',justifyContent:'space-between',alignItems:'center',
+                        background:issue.level==='error'?'#fef2f2':'#fffbeb',
+                        border:`1px solid ${issue.level==='error'?'#fca5a5':'#fde68a'}`,
+                        borderRadius:5,padding:'4px 10px',marginBottom:6,fontSize:11}}>
+                        <span style={{color:issue.level==='error'?'#dc2626':'#d97706',fontWeight:600}}>
+                          {issue.level==='error'?'🔴':'🟡'} {issue.msg}
+                        </span>
+                        <button onClick={()=>acknowledgeAnomaly(p)}
+                          style={{marginLeft:10,padding:'2px 8px',background:'#16a34a',color:'#fff',
+                            border:'none',borderRadius:3,cursor:'pointer',fontSize:10,fontFamily:'inherit',fontWeight:600}}>
+                          확인
+                        </button>
+                      </div>
+                    ))}
+                    <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
                           <span style={{fontWeight:700,color:'#1e40af',fontSize:16}}>{p.setQty?.toLocaleString()} EA</span>
                           <span style={{background:'#f3f4f6',color:'#374151',padding:'2px 8px',borderRadius:10,fontSize:11}}>{p.timeSlot||'오전'}</span>
                           <span style={{background:p.status==='confirmed'?'#dcfce7':'#fef9c3',
