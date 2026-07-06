@@ -109,6 +109,21 @@ export default function ShipmentCalendar({ transactions }) {
     const wb = XLSX.read(buf, { cellDates: true })
     const plans = []
 
+    // Excel 날짜 → YYYY-MM-DD 변환 (Date객체 또는 시리얼 숫자 모두 처리)
+    const toDateStr = (v) => {
+      if (!v) return null
+      if (v instanceof Date) {
+        const d = new Date(v.getTime() - v.getTimezoneOffset()*60000)
+        return d.toISOString().slice(0,10)
+      }
+      if (typeof v === 'number' && v > 40000 && v < 60000) {
+        // Excel 시리얼 → JS Date (1900 기준, 25569 오프셋)
+        const d = new Date(Math.round((v - 25569) * 86400 * 1000))
+        return d.toISOString().slice(0,10)
+      }
+      return null
+    }
+
     wb.SheetNames.forEach(sname => {
       const ws = wb.Sheets[sname]
       const rows = XLSX.utils.sheet_to_json(ws, { header:1, raw:true, defval:null })
@@ -116,11 +131,7 @@ export default function ShipmentCalendar({ transactions }) {
 
       rows.forEach(row => {
         // 날짜 행 감지 (Date 객체 또는 날짜 문자열)
-        const dateCells = row.slice(1).map(v => {
-          if (!v) return null
-          if (v instanceof Date) return v.toISOString().slice(0,10)
-          return null
-        })
+        const dateCells = row.slice(1).map(v => toDateStr(v))
         if (dateCells.some(d => d)) {
           currentDates = [null, ...dateCells]
           return
@@ -197,10 +208,20 @@ export default function ShipmentCalendar({ transactions }) {
             <div style={{fontSize:11,color:'#6b7280'}}>이번 달 출하 합계</div>
             <div style={{fontSize:22,fontWeight:700,color:'#1e40af'}}>{monthTotal.toLocaleString()} EA</div>
           </div>
-          <label style={S.uploadBtn}>
-            📂 엑셀 업로드
-            <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{display:'none'}} onChange={handleExcel}/>
-          </label>
+          <div style={{display:'flex',gap:8}}>
+            <button onClick={async()=>{
+              if(!window.confirm('등록된 출하계획을 전부 삭제하시겠습니까?\n(확정된 건 제외)')) return
+              const targets = transactions.filter(t=>t.type==='출하계획'&&t.isHeader&&t.status!=='confirmed')
+              for(const t of targets) await deleteDoc(doc(db,'transactions',t.id))
+              alert(`${targets.length}건 삭제 완료`)
+            }} style={{...S.uploadBtn,background:'#fee2e2',borderColor:'#fca5a5',color:'#dc2626'}}>
+              🗑 계획 전체삭제
+            </button>
+            <label style={S.uploadBtn}>
+              📂 엑셀 업로드
+              <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{display:'none'}} onChange={handleExcel}/>
+            </label>
+          </div>
         </div>
       </div>
 
