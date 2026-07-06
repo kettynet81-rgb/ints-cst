@@ -6,7 +6,7 @@ import { writeLog } from '../utils/logger'
 import * as XLSX from 'xlsx'
 
 const REPAIR_ITEMS = ['견시창 교체','반사판 교체','내부 볼트 파손','외부 볼트 파손','기타']
-const EMPTY_FORM = { rfid:'', repairItems:[], payType:'유상', round:'', outDate:'', inDate:'', memo:'' }
+const EMPTY_FORM = { rfid:'', rfidList:'', repairItems:[], payType:'유상', round:'', outDate:'', inDate:'', memo:'' }
 
 const parseDate = (v) => {
   if (!v) return ''
@@ -27,6 +27,7 @@ export default function RecallManage() {
   const [form, setForm]   = useState(EMPTY_FORM)
   const [editId, setEditId] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [bulkMode, setBulkMode] = useState(true)
   const [search, setSearch] = useState('')
   const [dateType, setDateType] = useState('반출일')
   const [dateFrom, setDateFrom] = useState('')
@@ -79,24 +80,43 @@ export default function RecallManage() {
   const setF = (k,v) => setForm(f => ({...f,[k]:v}))
 
   const save = async () => {
-    if (!form.rfid.trim() || !form.round.trim() || form.repairItems.length===0) return
+    if (!form.round.trim() || form.repairItems.length===0) return
     setSaving(true)
-    const data = {
-      rfid: form.rfid.trim().toUpperCase(),
-      repairItems: form.repairItems,
-      payType: form.payType,
-      round: form.round.trim(),
-      outDate: parseDate(form.outDate),
-      inDate: parseDate(form.inDate),
-      memo: form.memo.trim(),
-    }
-    if (editId) {
-      await updateDoc(doc(db,'recalls',editId), data)
-      await writeLog({ action:'수정', target:'리콜수리', docId:editId, after:data, user:userData?.name||'' })
-      setEditId(null)
+
+    if (bulkMode && !editId) {
+      // 일괄 입력: rfidList에서 RFID 파싱
+      const rfids = form.rfidList.split(/[\n\r\t,\s]+/).map(s=>s.trim().toUpperCase()).filter(s=>/^[A-Z]{3,4}\d{3,}$/.test(s))
+      if (rfids.length === 0) { setSaving(false); alert('유효한 RFID가 없습니다.'); return }
+      if (!window.confirm(`${rfids.length}건을 일괄 등록하시겠습니까?\n\n${rfids.slice(0,5).join(', ')}${rfids.length>5?'...':''}`)) { setSaving(false); return }
+      for (const rfid of rfids) {
+        await addDoc(collection(db,'recalls'), {
+          rfid, repairItems:form.repairItems, payType:form.payType,
+          round:form.round.trim(), outDate:parseDate(form.outDate),
+          inDate:parseDate(form.inDate), memo:form.memo.trim(),
+          createdAt:serverTimestamp(),
+        })
+      }
+      await writeLog({ action:'일괄입력', target:'리콜수리', after:{round:form.round,count:rfids.length,repairItems:form.repairItems}, user:userData?.name||'' })
+      alert(`${rfids.length}건 등록 완료!`)
     } else {
-      const ref = await addDoc(collection(db,'recalls'), { ...data, createdAt:serverTimestamp() })
-      await writeLog({ action:'입력', target:'리콜수리', after:data, user:userData?.name||'' })
+      if (!form.rfid.trim()) { setSaving(false); return }
+      const data = {
+        rfid: form.rfid.trim().toUpperCase(),
+        repairItems: form.repairItems,
+        payType: form.payType,
+        round: form.round.trim(),
+        outDate: parseDate(form.outDate),
+        inDate: parseDate(form.inDate),
+        memo: form.memo.trim(),
+      }
+      if (editId) {
+        await updateDoc(doc(db,'recalls',editId), data)
+        await writeLog({ action:'수정', target:'리콜수리', docId:editId, after:data, user:userData?.name||'' })
+        setEditId(null)
+      } else {
+        await addDoc(collection(db,'recalls'), { ...data, createdAt:serverTimestamp() })
+        await writeLog({ action:'입력', target:'리콜수리', after:data, user:userData?.name||'' })
+      }
     }
     setForm(EMPTY_FORM)
     setSaving(false)
@@ -167,11 +187,23 @@ export default function RecallManage() {
             <input value={form.round} onChange={e=>setF('round',e.target.value)}
               placeholder="예: 12차" style={{...S.inp,width:80}} onKeyDown={e=>e.key==='Enter'&&save()}/>
           </div>
-          <div style={S.field}>
-            <label style={S.label}>RFID NO *</label>
-            <input value={form.rfid} onChange={e=>setF('rfid',e.target.value.toUpperCase())}
-              placeholder="IFZD412" style={{...S.inp,width:110}} onKeyDown={e=>e.key==='Enter'&&save()}/>
-          </div>
+          {bulkMode && !editId ? (
+            <div style={{...S.field,flex:1,minWidth:200}}>
+              <label style={S.label}>RFID 목록 (붙여넣기 가능) *</label>
+              <textarea value={form.rfidList} onChange={e=>setF('rfidList',e.target.value)}
+                placeholder={"IFYG766\nIFYF237\nIFYF797\n...\n엑셀에서 복사 후 붙여넣기"}
+                style={{...S.inp,height:72,resize:'vertical',fontFamily:'monospace',fontSize:11,lineHeight:1.6}}/>
+              <div style={{fontSize:10,color:'#9ca3af',marginTop:2}}>
+                인식된 RFID: {form.rfidList.split(/[\n\r\t,\s]+/).filter(s=>/^[A-Z]{3,4}\d{3,}$/.test(s.trim())).length}개
+              </div>
+            </div>
+          ) : (
+            <div style={S.field}>
+              <label style={S.label}>RFID NO *</label>
+              <input value={form.rfid} onChange={e=>setF('rfid',e.target.value.toUpperCase())}
+                placeholder="IFZD412" style={{...S.inp,width:110}} onKeyDown={e=>e.key==='Enter'&&save()}/>
+            </div>
+          )}
           <div style={S.field}>
             <label style={S.label}>교체 항목 (복수 선택)</label>
             <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
@@ -218,8 +250,16 @@ export default function RecallManage() {
               placeholder="RFID 구형, 신형TYPE 등" style={{...S.inp}} onKeyDown={e=>e.key==='Enter'&&save()}/>
           </div>
           <div style={{display:'flex',gap:6,alignItems:'flex-end',paddingBottom:1}}>
+            {!editId && (
+              <button onClick={()=>{setBulkMode(!bulkMode);setForm(EMPTY_FORM)}}
+                style={{padding:'7px 10px',background:bulkMode?'#f3f4f6':'#eff6ff',border:'1px solid',
+                  borderColor:bulkMode?'#d1d5db':'#3b82f6',borderRadius:6,cursor:'pointer',
+                  fontSize:11,fontFamily:'inherit',color:bulkMode?'#374151':'#1e40af',fontWeight:600,whiteSpace:'nowrap'}}>
+                {bulkMode?'📝 개별입력':'📋 일괄입력'}
+              </button>
+            )}
             <button onClick={save} disabled={saving||!form.rfid||!form.round}
-              style={{...S.saveBtn,opacity:saving||!form.rfid||!form.round||!form.repairItems.length?0.5:1}}>
+              style={{...S.saveBtn,opacity:saving||(!bulkMode&&!editId&&!form.rfid)||(bulkMode&&!editId&&!form.rfidList)||!form.round||!form.repairItems.length?0.5:1}}>
               {saving?'저장 중...':(editId?'수정':'+ 추가')}
             </button>
             {editId && <button onClick={()=>{setEditId(null);setForm(EMPTY_FORM)}} style={S.cancelBtn}>취소</button>}
