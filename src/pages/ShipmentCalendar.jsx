@@ -15,7 +15,7 @@ const HOLIDAYS = {
 const DAYS   = ['일','월','화','수','목','금','토']
 const MONTHS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월']
 
-const EMPTY_FORM = { qty:'', serial:'', orderNo:'', timeSlot:'오전', memo:'', _shipmentId:'' }
+const EMPTY_FORM = { qty:'', serial:'', orderNo:'', timeSlot:'오전', memo:'', _shipmentId:'', date:'' }
 
 export default function ShipmentCalendar({ transactions, stockMap = {} }) {
   const { userData } = useAuth()
@@ -156,7 +156,7 @@ export default function ShipmentCalendar({ transactions, stockMap = {} }) {
     const data = {
       type:'출하계획', isHeader:true,
       shipmentId,
-      date: modal.date,
+      date: (editId && form.date) ? form.date : modal.date,
       setQty: Number(form.qty),
       quantity: Number(form.qty),
       serial: form.serial.trim(),
@@ -180,7 +180,7 @@ export default function ShipmentCalendar({ transactions, stockMap = {} }) {
 
   const startEdit = (p) => {
     setEditId(p.id)
-    setForm({ qty:String(p.setQty||''), serial:p.serial||'', orderNo:p.orderNo||'', timeSlot:p.timeSlot||'오전', memo:p.memo||'', _shipmentId:p.shipmentId||'' })
+    setForm({ qty:String(p.setQty||''), serial:p.serial||'', orderNo:p.orderNo||'', timeSlot:p.timeSlot||'오전', memo:p.memo||'', _shipmentId:p.shipmentId||'', date:p.date||'' })
   }
 
   const deletePlan = async (p) => {
@@ -554,6 +554,13 @@ export default function ShipmentCalendar({ transactions, stockMap = {} }) {
             {/* 입력 폼 */}
             <div style={S.formBox}>
               <div style={S.sectionLabel}>{editId ? '✏️ 계획 수정' : '+ 출하계획 추가'}</div>
+              {editId && (
+                <div style={{...S.field, marginBottom:8}}>
+                  <label style={S.label}>날짜 수정</label>
+                  <input type="date" value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))}
+                    style={{...S.inp, maxWidth:180}}/>
+                </div>
+              )}
               <div style={S.formGrid}>
                 <div style={S.field}>
                   <label style={S.label}>수량 (EA) *</label>
