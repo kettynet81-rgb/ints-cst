@@ -244,6 +244,23 @@ export default function ShipmentCalendar({ transactions, stockMap = {} }) {
     setTimeout(() => w.print(), 300)
   }
 
+
+  // 날짜 하루 앞당기기 (잘못 들어간 데이터 수정)
+  const shiftDatesForward = async () => {
+    const targets = transactions.filter(t => t.type==='출하계획' && t.isHeader)
+    if (!window.confirm(`출하계획 ${targets.length}건의 날짜를 전부 +1일 수정합니다.\n예: 2026-07-06 → 2026-07-07\n\n계속하시겠습니까?`)) return
+    let count = 0
+    for (const t of targets) {
+      if (!t.date) continue
+      const d = new Date(t.date + 'T00:00:00')
+      d.setDate(d.getDate() + 1)
+      const newDate = d.toISOString().slice(0,10)
+      await updateDoc(doc(db,'transactions',t.id), { date: newDate })
+      count++
+    }
+    alert(`${count}건 날짜 수정 완료`)
+  }
+
   // 엑셀 업로드 파싱
   const handleExcel = async (e) => {
     const file = e.target.files[0]
@@ -369,6 +386,10 @@ export default function ShipmentCalendar({ transactions, stockMap = {} }) {
             <div style={{fontSize:22,fontWeight:700,color:'#1e40af'}}>{monthTotal.toLocaleString()} EA</div>
           </div>
           <div style={{display:'flex',gap:8}}>
+            <button onClick={shiftDatesForward}
+              style={{...S.uploadBtn,background:'#7c3aed',color:'#fff',border:'none',cursor:'pointer'}}>
+              📅 날짜 +1일
+            </button>
             <button onClick={async()=>{
               if(!window.confirm('등록된 출하계획을 전부 삭제하시겠습니까?\n(확정된 건 제외)')) return
               const targets = transactions.filter(t=>t.type==='출하계획'&&t.isHeader&&t.status!=='confirmed')
