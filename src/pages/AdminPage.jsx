@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { db } from "../firebase"
-import { collection, onSnapshot, doc, updateDoc, getDocs, writeBatch } from "firebase/firestore"
+import { collection, onSnapshot, doc, updateDoc, getDocs, writeBatch, query, where } from "firebase/firestore"
 import { useAuth } from "../contexts/AuthContext"
 
 const ROLE_LABEL = { pending:"대기", approved:"승인", admin:"관리자", rejected:"거절", blocked:"차단" }
@@ -16,7 +16,37 @@ export default function AdminPage() {
       setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() }))
         .sort((a,b) => {
           const order = { pending:0, approved:1, admin:2, rejected:3, blocked:4 }
-          const runMigration = async () => {
+        
+  // 출하확정 전체 취소 (꼬인 재고 복구)
+  const restoreAllConfirmed = async () => {
+    if (!window.confirm(
+      '⚠ 출하 확정 전체 취소\n\n확정된 모든 출하계획을 취소하고\n차감된 재고를 전부 복구합니다.\n\n계속하시겠습니까?'
+    )) return
+
+    // 1. shipmentId 있는 출고 기록 전부 삭제
+    const outSnap = await getDocs(query(collection(db,'transactions'), where('type','==','출고')))
+    const shipmentOuts = outSnap.docs.filter(d => d.data().shipmentId)
+
+    // 2. 확정된 출하계획 → planned으로 되돌리기
+    const planSnap = await getDocs(query(collection(db,'transactions'), where('status','==','confirmed')))
+
+    // batch 처리 (500개 제한)
+    const allDocs = [...shipmentOuts.map(d=>({id:d.id,op:'delete'})), ...planSnap.docs.map(d=>({id:d.id,op:'update'}))]
+    let batch = writeBatch(db)
+    let ops = 0
+
+    for (const item of allDocs) {
+      if (item.op === 'delete') batch.delete(doc(db,'transactions',item.id))
+      else batch.update(doc(db,'transactions',item.id), { status:'planned' })
+      ops++
+      if (ops === 400) { await batch.commit(); batch = writeBatch(db); ops = 0 }
+    }
+    if (ops > 0) await batch.commit()
+
+    alert(`완료\n출고기록 ${shipmentOuts.length}건 삭제\n출하계획 ${planSnap.docs.length}건 복구`)
+  }
+
+  const runMigration = async () => {
     if (!window.confirm('A1→A1-1, A8→A8-1, A14→A14-1\n기존 데이터를 일괄 변경합니다. 계속하시겠습니까?')) return
     const MAP = { 'A1': 'A1-1', 'A8': 'A8-1', 'A14': 'A14-1' }
     const snap = await getDocs(collection(db, 'transactions'))
@@ -41,6 +71,36 @@ export default function AdminPage() {
 
   const pendingCount = users.filter(u => u.role === "pending").length
 
+
+  // 출하확정 전체 취소 (꼬인 재고 복구)
+  const restoreAllConfirmed = async () => {
+    if (!window.confirm(
+      '⚠ 출하 확정 전체 취소\n\n확정된 모든 출하계획을 취소하고\n차감된 재고를 전부 복구합니다.\n\n계속하시겠습니까?'
+    )) return
+
+    // 1. shipmentId 있는 출고 기록 전부 삭제
+    const outSnap = await getDocs(query(collection(db,'transactions'), where('type','==','출고')))
+    const shipmentOuts = outSnap.docs.filter(d => d.data().shipmentId)
+
+    // 2. 확정된 출하계획 → planned으로 되돌리기
+    const planSnap = await getDocs(query(collection(db,'transactions'), where('status','==','confirmed')))
+
+    // batch 처리 (500개 제한)
+    const allDocs = [...shipmentOuts.map(d=>({id:d.id,op:'delete'})), ...planSnap.docs.map(d=>({id:d.id,op:'update'}))]
+    let batch = writeBatch(db)
+    let ops = 0
+
+    for (const item of allDocs) {
+      if (item.op === 'delete') batch.delete(doc(db,'transactions',item.id))
+      else batch.update(doc(db,'transactions',item.id), { status:'planned' })
+      ops++
+      if (ops === 400) { await batch.commit(); batch = writeBatch(db); ops = 0 }
+    }
+    if (ops > 0) await batch.commit()
+
+    alert(`완료\n출고기록 ${shipmentOuts.length}건 삭제\n출하계획 ${planSnap.docs.length}건 복구`)
+  }
+
   const runMigration = async () => {
     if (!window.confirm('A1→A1-1, A8→A8-1, A14→A14-1\n기존 데이터를 일괄 변경합니다. 계속하시겠습니까?')) return
     const MAP = { 'A1': 'A1-1', 'A8': 'A8-1', 'A14': 'A14-1' }
@@ -57,6 +117,17 @@ export default function AdminPage() {
 
   return (
     <div style={{padding:28}}>
+      <div style={{marginBottom:12,padding:'12px 14px',background:'#fee2e2',border:'1px solid #fca5a5',borderRadius:8,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div>
+          <div style={{fontSize:13,fontWeight:700,color:'#991b1b'}}>🚨 출하확정 전체 취소 (재고 복구)</div>
+          <div style={{fontSize:11,color:'#b91c1c',marginTop:2}}>확정된 모든 출하계획을 취소하고 차감된 재고를 복구합니다</div>
+        </div>
+        <button onClick={restoreAllConfirmed}
+          style={{padding:'7px 14px',background:'#dc2626',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:'inherit',whiteSpace:'nowrap'}}>
+          재고 복구
+        </button>
+      </div>
+
       <div style={{marginBottom:16,padding:'12px 14px',background:'#fef9c3',border:'1px solid #fde68a',borderRadius:8,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
         <div>
           <div style={{fontSize:13,fontWeight:700,color:'#92400e'}}>🔧 데이터 마이그레이션</div>
