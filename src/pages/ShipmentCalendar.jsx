@@ -1,37 +1,31 @@
-import { useState, useMemo } from 'react'
-import { collection, addDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore'
+import { useState, useMemo, useRef } from 'react'
+import { collection, addDoc, deleteDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase'
+import { useAuth } from '../contexts/AuthContext'
+import { writeLog } from '../utils/logger'
+import * as XLSX from 'xlsx'
 
-// 2026 공휴일 (제헌절 7/17 제외 - 2008년부터 공휴일 아님, 기념일로만 표시)
 const HOLIDAYS = {
-  '2026-01-01': { name:'신정', type:'holiday' },
-  '2026-02-16': { name:'설날 연휴', type:'holiday' },
-  '2026-02-17': { name:'설날', type:'holiday' },
-  '2026-02-18': { name:'설날 연휴', type:'holiday' },
-  '2026-03-01': { name:'삼일절', type:'holiday' },
-  '2026-05-05': { name:'어린이날', type:'holiday' },
-  '2026-05-24': { name:'부처님오신날', type:'holiday' },
-  '2026-06-06': { name:'현충일', type:'holiday' },
-  '2026-07-17': { name:'제헌절 (기념일)', type:'memo' },   // 공휴일 아님
-  '2026-08-15': { name:'광복절', type:'holiday' },
-  '2026-10-02': { name:'추석 연휴', type:'holiday' },
-  '2026-10-03': { name:'추석·개천절', type:'holiday' },
-  '2026-10-04': { name:'추석 연휴', type:'holiday' },
-  '2026-10-09': { name:'한글날', type:'holiday' },
-  '2026-12-25': { name:'크리스마스', type:'holiday' },
+  '2026-01-01':'신정','2026-02-16':'설날 연휴','2026-02-17':'설날','2026-02-18':'설날 연휴',
+  '2026-03-01':'삼일절','2026-05-05':'어린이날','2026-05-24':'부처님오신날','2026-06-06':'현충일',
+  '2026-07-17':'제헌절(기념일)','2026-08-15':'광복절','2026-10-02':'추석 연휴',
+  '2026-10-03':'추석·개천절','2026-10-04':'추석 연휴','2026-10-09':'한글날','2026-12-25':'크리스마스',
 }
-
-const MONTHS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월']
 const DAYS   = ['일','월','화','수','목','금','토']
+const MONTHS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월']
 
-export default function ShipmentCalendar({ transactions, onNavigate }) {
+const EMPTY_FORM = { qty:'', serial:'', orderNo:'', timeSlot:'오전', memo:'' }
+
+export default function ShipmentCalendar({ transactions }) {
+  const { userData } = useAuth()
   const today = new Date()
   const [year,  setYear]  = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth())
-  const [picked, setPicked] = useState(null)
-  const [form, setForm]   = useState({ setQty:'', memo:'' })
+  const [modal, setModal] = useState(null)   // { date }
+  const [form,  setForm]  = useState(EMPTY_FORM)
+  const [editId, setEditId] = useState(null)
   const [saving, setSaving] = useState(false)
-
+  const fileRef = useRef()
   const todayStr = today.toISOString().slice(0,10)
 
   // 출하계획 맵
@@ -46,240 +40,352 @@ export default function ShipmentCalendar({ transactions, onNavigate }) {
     return m
   }, [transactions])
 
-  const firstDay    = new Date(year, month, 1).getDay()
-  const daysInMonth = new Date(year, month + 1, 0).getDate()
-  const dateStr = d => `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
+  const ds = (d) => `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
+  const firstDay = new Date(year, month, 1).getDay()
+  const daysInMonth = new Date(year, month+1, 0).getDate()
+  const cells = []
+  for(let i=0;i<firstDay;i++) cells.push(null)
+  for(let d=1;d<=daysInMonth;d++) cells.push(d)
+  while(cells.length%7!==0) cells.push(null)
+
+  const monthTotal = Object.entries(planMap)
+    .filter(([k]) => k.startsWith(`${year}-${String(month+1).padStart(2,'0')}`))
+    .reduce((s,[,v]) => s + v.reduce((ss,p) => ss+(p.setQty||0),0), 0)
 
   const prevMonth = () => { if(month===0){setMonth(11);setYear(y=>y-1)}else setMonth(m=>m-1) }
   const nextMonth = () => { if(month===11){setMonth(0);setYear(y=>y+1)}else setMonth(m=>m+1) }
 
+  const openModal = (date) => {
+    setModal({ date })
+    setForm(EMPTY_FORM)
+    setEditId(null)
+  }
+
   const savePlan = async () => {
-    if (!form.setQty || Number(form.setQty) <= 0) return
+    if (!form.qty || Number(form.qty) <= 0) return
     setSaving(true)
-    await addDoc(collection(db,'transactions'), {
+    const data = {
       type:'출하계획', isHeader:true,
       shipmentId:`ship_${Date.now()}`,
-      date:picked, setQty:Number(form.setQty),
-      memo:form.memo.trim(), status:'planned',
+      date: modal.date,
+      setQty: Number(form.qty),
+      quantity: Number(form.qty),
+      serial: form.serial.trim(),
+      orderNo: form.orderNo.trim(),
+      timeSlot: form.timeSlot,
+      memo: form.memo.trim(),
+      status:'planned',
       itemCode:'SET', itemName:'CST SET 출하',
-      quantity:Number(form.setQty),
-      createdAt:serverTimestamp(),
-    })
-    setForm({ setQty:'', memo:'' })
+      createdAt: serverTimestamp(),
+    }
+    if (editId) {
+      await updateDoc(doc(db,'transactions',editId), { ...data, createdAt: undefined })
+      await writeLog({ action:'수정', target:'출하계획', docId:editId, after:data, user:userData?.name||'' })
+      setEditId(null)
+    } else {
+      await addDoc(collection(db,'transactions'), data)
+      await writeLog({ action:'입력', target:'출하계획', after:data, user:userData?.name||'' })
+    }
+    setForm(EMPTY_FORM)
     setSaving(false)
   }
 
-  const deletePlan = async id => {
-    if(!window.confirm('삭제하시겠습니까?')) return
-    await deleteDoc(doc(db,'transactions',id))
+  const startEdit = (p) => {
+    setEditId(p.id)
+    setForm({ qty:String(p.setQty||''), serial:p.serial||'', orderNo:p.orderNo||'', timeSlot:p.timeSlot||'오전', memo:p.memo||'' })
   }
 
-  const pickedPlans = picked ? (planMap[picked]||[]) : []
-  const monthTotal  = Object.entries(planMap)
-    .filter(([k]) => k.startsWith(`${year}-${String(month+1).padStart(2,'0')}`))
-    .reduce((s,[,v]) => s + v.reduce((ss,p) => ss+(p.setQty||0), 0), 0)
+  const deletePlan = async (p) => {
+    if(!window.confirm('삭제하시겠습니까?')) return
+    await deleteDoc(doc(db,'transactions',p.id))
+    await writeLog({ action:'삭제', target:'출하계획', docId:p.id, before:{date:p.date,setQty:p.setQty}, user:userData?.name||'' })
+  }
 
-  // 달력 셀 생성
-  const cells = []
-  for(let i=0;i<firstDay;i++) cells.push(null)
-  for(let d=1;d<=daysInMonth;d++) cells.push(d)
-  while(cells.length % 7 !== 0) cells.push(null)
+  // 엑셀 업로드 파싱
+  const handleExcel = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    const buf = await file.arrayBuffer()
+    const wb = XLSX.read(buf)
+    const plans = []
+
+    wb.SheetNames.forEach(sname => {
+      const ws = wb.Sheets[sname]
+      const rows = XLSX.utils.sheet_to_json(ws, { header:1, raw:false, defval:'' })
+      let currentDates = []
+
+      rows.forEach(row => {
+        // 날짜 행 감지
+        const dates = row.slice(1).map(v => {
+          if (!v) return null
+          const d = new Date(v)
+          return isNaN(d.getTime()) ? null : d.toISOString().slice(0,10)
+        })
+        if (dates.some(d => d)) {
+          currentDates = [null, ...dates]
+          return
+        }
+        // 내용 행 파싱
+        row.slice(1).forEach((cell, ci) => {
+          const date = currentDates[ci+1]
+          if (!date || !cell || !cell.trim()) return
+          // "56EA(IFZF001~056)오전\n발주번호:2064697146" 같은 형태 파싱
+          const lines = cell.split('\n').map(l => l.trim()).filter(Boolean)
+          lines.forEach(line => {
+            const qtyMatch  = line.match(/(\d+)EA/)
+            const serialMatch = line.match(/\(([^)]+)\)/)
+            const orderMatch  = line.match(/발주번호[:\s]*(\d+)/)
+            const timeMatch   = line.match(/오전|오후/)
+            if (qtyMatch) {
+              plans.push({
+                date, qty: Number(qtyMatch[1]),
+                serial: serialMatch ? serialMatch[1] : '',
+                orderNo: orderMatch ? orderMatch[1] : '',
+                timeSlot: timeMatch ? timeMatch[0] : '오전',
+                memo: line,
+              })
+            }
+          })
+        })
+      })
+    })
+
+    if (plans.length === 0) { alert('파싱된 일정이 없습니다.'); return }
+    if (!window.confirm(`${plans.length}건의 출하계획을 등록하시겠습니까?`)) return
+
+    for (const p of plans) {
+      await addDoc(collection(db,'transactions'), {
+        type:'출하계획', isHeader:true,
+        shipmentId:`ship_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
+        date:p.date, setQty:p.qty, quantity:p.qty,
+        serial:p.serial, orderNo:p.orderNo, timeSlot:p.timeSlot, memo:p.memo,
+        status:'planned', itemCode:'SET', itemName:'CST SET 출하',
+        createdAt:serverTimestamp(),
+      })
+    }
+    alert(`완료: ${plans.length}건 등록되었습니다.`)
+    fileRef.current.value = ''
+  }
+
+  const modalPlans = modal ? (planMap[modal.date]||[]) : []
+  const isHoliday = (dateStr) => !!HOLIDAYS[dateStr]
+  const hdName    = (dateStr) => HOLIDAYS[dateStr]||''
 
   return (
     <div style={S.wrap}>
-      {/* 상단 헤더 */}
+      {/* 헤더 */}
       <div style={S.topBar}>
         <div>
-          <div style={S.pageTitle}>📅 출하계획 달력</div>
-          <div style={S.sub}>날짜를 클릭하여 출하계획을 등록하세요</div>
+          <div style={S.pageTitle}>📅 출하계획 관리</div>
+          <div style={S.sub}>날짜를 클릭하여 출하계획을 등록·조회하세요</div>
         </div>
-        <div style={S.monthSummary}>
-          <div style={S.summaryLabel}>{MONTHS[month]} 출하 합계</div>
-          <div style={S.summaryValue}>{monthTotal.toLocaleString()} SET</div>
+        <div style={{display:'flex',alignItems:'center',gap:12}}>
+          <div style={S.summary}>
+            <div style={{fontSize:11,color:'#6b7280'}}>이번 달 출하 합계</div>
+            <div style={{fontSize:22,fontWeight:700,color:'#1e40af'}}>{monthTotal.toLocaleString()} EA</div>
+          </div>
+          <label style={S.uploadBtn}>
+            📂 엑셀 업로드
+            <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{display:'none'}} onChange={handleExcel}/>
+          </label>
         </div>
       </div>
 
-      <div style={S.calWrap}>
-        {/* 달력 */}
-        <div style={S.calBox}>
-          {/* 월 이동 */}
-          <div style={S.calHeader}>
-            <button style={S.navBtn} onClick={prevMonth}>‹</button>
-            <span style={S.calTitle}>{year}년 {MONTHS[month]}</span>
-            <button style={S.navBtn} onClick={nextMonth}>›</button>
-            <button style={S.todayBtn} onClick={()=>{setYear(today.getFullYear());setMonth(today.getMonth())}}>오늘</button>
-          </div>
-
-          {/* 요일 헤더 */}
-          <div style={S.grid7}>
-            {DAYS.map((d,i) => (
-              <div key={d} style={{...S.dayHead, color:i===0?'#ef4444':i===6?'#3b82f6':'#6b7280'}}>{d}</div>
-            ))}
-          </div>
-
-          {/* 날짜 그리드 */}
-          <div style={S.grid7}>
-            {cells.map((d, i) => {
-              if(!d) return <div key={i} style={S.emptyCell}/>
-              const ds       = dateStr(d)
-              const hw       = HOLIDAYS[ds]
-              const isHoliday= hw?.type==='holiday'
-              const isMemo   = hw?.type==='memo'
-              const isSun    = (firstDay+d-1)%7===0
-              const isSat    = (firstDay+d-1)%7===6
-              const isToday  = ds===todayStr
-              const isPicked = ds===picked
-              const plans    = planMap[ds]||[]
-              const hasPlans = plans.length>0
-
-              return (
-                <div key={i} onClick={()=>setPicked(ds)}
-                  style={{
-                    ...S.cell,
-                    background: isPicked?'#1e40af':isToday?'#eff6ff':'#fff',
-                    border: isPicked?'2px solid #1e40af':isToday?'2px solid #93c5fd':'1px solid #e5e7eb',
-                    color: isHoliday||isSun ? '#ef4444' : isSat ? '#2563eb' : isMemo ? '#f97316' : '#111827',
-                  }}>
-                  <div style={{fontWeight:isToday?700:500,fontSize:13}}>{d}</div>
-                  {hw && <div style={{fontSize:9,marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',
-                    color: isPicked?'#93c5fd':isHoliday?'#ef4444':'#f97316'}}>{hw.name}</div>}
-                  {hasPlans && (
-                    <div style={{marginTop:2,display:'flex',flexDirection:'column',gap:1}}>
-                      {plans.slice(0,2).map((p,pi)=>(
-                        <div key={pi} style={{
-                          background: isPicked?'rgba(255,255,255,0.2)':'#dbeafe',
-                          color: isPicked?'#fff':'#1e40af',
-                          borderRadius:3, padding:'1px 4px', fontSize:9, fontWeight:700,
-                          overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'
-                        }}>{p.setQty}SET {p.status==='confirmed'?'✓':''}</div>
-                      ))}
-                      {plans.length>2 && <div style={{fontSize:9,color:'#94a3b8'}}>+{plans.length-2}</div>}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-
-          {/* 범례 */}
-          <div style={S.legend}>
-            <div style={S.lgItem}><div style={{...S.lgDot,background:'#ef4444'}}/> 공휴일</div>
-            <div style={S.lgItem}><div style={{...S.lgDot,background:'#f97316'}}/> 기념일</div>
-            <div style={S.lgItem}><div style={{...S.lgDot,background:'#dbeafe',border:'1px solid #93c5fd'}}/> 출하계획</div>
-            <div style={S.lgItem}><div style={{...S.lgDot,background:'#eff6ff',border:'2px solid #93c5fd'}}/> 오늘</div>
-          </div>
+      {/* 달력 */}
+      <div style={S.calBox}>
+        <div style={S.calHeader}>
+          <button style={S.navBtn} onClick={prevMonth}>‹</button>
+          <span style={S.calTitle}>{year}년 {MONTHS[month]}</span>
+          <button style={S.navBtn} onClick={nextMonth}>›</button>
+          <button style={S.todayBtn} onClick={()=>{setYear(today.getFullYear());setMonth(today.getMonth())}}>오늘</button>
         </div>
+        <div style={S.grid7}>
+          {DAYS.map((d,i) => (
+            <div key={d} style={{...S.dayHead, color:i===0?'#ef4444':i===6?'#3b82f6':'#374151'}}>{d}</div>
+          ))}
+        </div>
+        <div style={S.grid7}>
+          {cells.map((d,i) => {
+            if(!d) return <div key={i} style={S.emptyCell}/>
+            const date     = ds(d)
+            const hw       = HOLIDAYS[date]
+            const isSun    = (firstDay+d-1)%7===0
+            const isSat    = (firstDay+d-1)%7===6
+            const isToday  = date===todayStr
+            const plans    = planMap[date]||[]
+            const totalQty = plans.reduce((s,p)=>s+(p.setQty||0),0)
 
-        {/* 우측 사이드 패널 */}
-        <div style={S.sidePanel}>
-          {picked ? (
-            <>
-              <div style={S.sidePanelTitle}>
-                {picked}
-                {HOLIDAYS[picked] && (
-                  <span style={{marginLeft:6,fontSize:11,color:HOLIDAYS[picked].type==='holiday'?'#ef4444':'#f97316'}}>
-                    {HOLIDAYS[picked].name}
-                  </span>
+            return (
+              <div key={i} onClick={()=>openModal(date)}
+                style={{
+                  ...S.cell,
+                  background: isToday?'#eff6ff':'#fff',
+                  border: isToday?'2px solid #93c5fd':'1px solid #e5e7eb',
+                  color: hw||isSun?'#ef4444':isSat?'#2563eb':'#111827',
+                }}>
+                <div style={{fontWeight:isToday?700:500,fontSize:14}}>{d}</div>
+                {hw && <div style={{fontSize:9,color:'#ef4444',marginTop:1,lineHeight:1.2}}>{hw}</div>}
+                {totalQty > 0 && (
+                  <div style={{marginTop:3}}>
+                    <div style={{background:'#1e40af',color:'#fff',borderRadius:4,padding:'2px 5px',fontSize:10,fontWeight:700,textAlign:'center'}}>
+                      {totalQty.toLocaleString()} EA
+                    </div>
+                    {plans.slice(0,2).map((p,pi)=>(
+                      <div key={pi} style={{fontSize:9,color:'#374151',marginTop:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                        {p.timeSlot} {p.serial}
+                      </div>
+                    ))}
+                    {plans.length>2&&<div style={{fontSize:9,color:'#9ca3af'}}>+{plans.length-2}건</div>}
+                  </div>
                 )}
               </div>
+            )
+          })}
+        </div>
+        {/* 범례 */}
+        <div style={S.legend}>
+          <div style={S.lgItem}><div style={{...S.lgDot,background:'#1e40af'}}/> 출하계획</div>
+          <div style={S.lgItem}><div style={{...S.lgDot,background:'#ef4444'}}/> 공휴일</div>
+          <div style={S.lgItem}><div style={{...S.lgDot,background:'#eff6ff',border:'2px solid #93c5fd'}}/> 오늘</div>
+        </div>
+      </div>
 
-              {/* 기존 계획 목록 */}
-              {pickedPlans.length === 0 ? (
-                <div style={{color:'#9ca3af',fontSize:12,padding:'16px 0',textAlign:'center'}}>등록된 계획이 없습니다</div>
-              ) : (
-                <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:12}}>
-                  {pickedPlans.map(p => (
-                    <div key={p.id} style={S.planCard}>
-                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                        <span style={{fontWeight:700,color:'#1e40af',fontSize:15}}>{p.setQty} SET</span>
-                        <span style={{fontSize:11,padding:'2px 7px',borderRadius:10,
-                          background:p.status==='confirmed'?'#dcfce7':'#fef9c3',
-                          color:p.status==='confirmed'?'#16a34a':'#ca8a04',fontWeight:600}}>
-                          {p.status==='confirmed'?'출하확정':'계획'}
-                        </span>
+      {/* 날짜 상세 모달 */}
+      {modal && (
+        <div style={S.modalBg} onClick={()=>{setModal(null);setEditId(null);setForm(EMPTY_FORM)}}>
+          <div style={S.modalBox} onClick={e=>e.stopPropagation()}>
+            <div style={S.modalHeader}>
+              <div>
+                <div style={{fontSize:16,fontWeight:700,color:'#111827'}}>{modal.date}</div>
+                {HOLIDAYS[modal.date] && <div style={{fontSize:12,color:'#ef4444',marginTop:2}}>{HOLIDAYS[modal.date]}</div>}
+              </div>
+              <button onClick={()=>{setModal(null);setEditId(null);setForm(EMPTY_FORM)}} style={S.closeBtn}>✕</button>
+            </div>
+
+            {/* 기존 계획 목록 */}
+            {modalPlans.length > 0 && (
+              <div style={{marginBottom:16}}>
+                <div style={S.sectionLabel}>등록된 출하계획 ({modalPlans.length}건 / 합계 {modalPlans.reduce((s,p)=>s+(p.setQty||0),0).toLocaleString()} EA)</div>
+                {modalPlans.map(p => (
+                  <div key={p.id} style={S.planCard}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+                      <div style={{flex:1}}>
+                        <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+                          <span style={{fontWeight:700,color:'#1e40af',fontSize:16}}>{p.setQty?.toLocaleString()} EA</span>
+                          <span style={{background:'#f3f4f6',color:'#374151',padding:'2px 8px',borderRadius:10,fontSize:11}}>{p.timeSlot||'오전'}</span>
+                          <span style={{background:p.status==='confirmed'?'#dcfce7':'#fef9c3',
+                            color:p.status==='confirmed'?'#16a34a':'#ca8a04',padding:'2px 8px',borderRadius:10,fontSize:11,fontWeight:600}}>
+                            {p.status==='confirmed'?'출하확정':'계획'}
+                          </span>
+                        </div>
+                        {p.serial  && <div style={{fontSize:12,color:'#374151',marginTop:4}}>📋 시리얼: {p.serial}</div>}
+                        {p.orderNo && <div style={{fontSize:12,color:'#374151',marginTop:2}}>🔖 발주번호: {p.orderNo}</div>}
+                        {p.memo    && <div style={{fontSize:11,color:'#6b7280',marginTop:2}}>{p.memo}</div>}
                       </div>
-                      {p.memo && <div style={{fontSize:12,color:'#6b7280',marginTop:4}}>{p.memo}</div>}
-                      {p.status!=='confirmed' && (
-                        <div style={{display:'flex',justifyContent:'flex-end',marginTop:6}}>
-                          <button onClick={()=>deletePlan(p.id)}
-                            style={{fontSize:11,color:'#ef4444',background:'none',border:'1px solid #fca5a5',borderRadius:4,padding:'2px 8px',cursor:'pointer'}}>
-                            삭제
-                          </button>
+                      {p.status !== 'confirmed' && (
+                        <div style={{display:'flex',gap:6,flexShrink:0,marginLeft:8}}>
+                          <button onClick={()=>startEdit(p)} style={S.editBtn}>수정</button>
+                          <button onClick={()=>deletePlan(p)} style={S.delBtn}>삭제</button>
                         </div>
                       )}
                     </div>
-                  ))}
-                </div>
-              )}
+                  </div>
+                ))}
+              </div>
+            )}
 
-              {/* 새 계획 추가 */}
-              <div style={S.addBox}>
-                <div style={{fontSize:12,fontWeight:600,color:'#374151',marginBottom:6}}>출하계획 추가</div>
-                <div style={{display:'flex',gap:6,marginBottom:6}}>
-                  <input type="number" value={form.setQty}
-                    onChange={e=>setForm(f=>({...f,setQty:e.target.value}))}
-                    placeholder="SET 수량" style={{...S.inp,width:80}}/>
-                  <input type="text" value={form.memo}
-                    onChange={e=>setForm(f=>({...f,memo:e.target.value}))}
-                    placeholder="메모 (선택)" style={{...S.inp,flex:1}}
+            {/* 입력 폼 */}
+            <div style={S.formBox}>
+              <div style={S.sectionLabel}>{editId ? '✏️ 계획 수정' : '+ 출하계획 추가'}</div>
+              <div style={S.formGrid}>
+                <div style={S.field}>
+                  <label style={S.label}>수량 (EA) *</label>
+                  <input type="number" value={form.qty} onChange={e=>setForm(f=>({...f,qty:e.target.value}))}
+                    placeholder="예: 56" style={S.inp}/>
+                </div>
+                <div style={S.field}>
+                  <label style={S.label}>오전/오후</label>
+                  <div style={{display:'flex',gap:6}}>
+                    {['오전','오후'].map(t => (
+                      <button key={t} onClick={()=>setForm(f=>({...f,timeSlot:t}))}
+                        style={{flex:1,padding:'7px',border:'1px solid',borderRadius:6,cursor:'pointer',fontFamily:'inherit',fontSize:12,fontWeight:600,
+                          borderColor:form.timeSlot===t?'#1e40af':'#d1d5db',
+                          background:form.timeSlot===t?'#1e40af':'#fff',
+                          color:form.timeSlot===t?'#fff':'#374151'}}>
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div style={{...S.field, gridColumn:'1/-1'}}>
+                  <label style={S.label}>시리얼 범위</label>
+                  <input type="text" value={form.serial} onChange={e=>setForm(f=>({...f,serial:e.target.value}))}
+                    placeholder="예: IFZF001~056" style={S.inp}/>
+                </div>
+                <div style={{...S.field, gridColumn:'1/-1'}}>
+                  <label style={S.label}>발주번호</label>
+                  <input type="text" value={form.orderNo} onChange={e=>setForm(f=>({...f,orderNo:e.target.value}))}
+                    placeholder="예: 2064697146" style={S.inp}/>
+                </div>
+                <div style={{...S.field, gridColumn:'1/-1'}}>
+                  <label style={S.label}>메모</label>
+                  <input type="text" value={form.memo} onChange={e=>setForm(f=>({...f,memo:e.target.value}))}
+                    placeholder="추가 메모" style={S.inp}
                     onKeyDown={e=>e.key==='Enter'&&savePlan()}/>
                 </div>
-                <button onClick={savePlan} disabled={saving||!form.setQty}
-                  style={{...S.saveBtn, opacity:saving||!form.setQty?0.5:1}}>
-                  {saving?'저장 중...':'+ 출하계획 추가'}
-                </button>
               </div>
-
-              {/* 출하관리로 이동 */}
-              <button onClick={()=>onNavigate('shipment')}
-                style={{marginTop:8,width:'100%',padding:'8px',background:'none',
-                  border:'1px solid #d1d5db',borderRadius:6,cursor:'pointer',fontSize:12,
-                  color:'#6b7280',fontFamily:'inherit'}}>
-                출하 관리 페이지로 →
-              </button>
-            </>
-          ) : (
-            <div style={{color:'#9ca3af',fontSize:12,textAlign:'center',padding:'40px 0'}}>
-              <div style={{fontSize:32,marginBottom:8}}>📋</div>
-              날짜를 클릭하면<br/>출하계획을 확인하거나<br/>새로 등록할 수 있어요
+              <div style={{display:'flex',gap:8,marginTop:10}}>
+                <button onClick={savePlan} disabled={saving||!form.qty}
+                  style={{...S.saveBtn, opacity:saving||!form.qty?0.5:1, flex:1}}>
+                  {saving?'저장 중...':(editId?'수정 완료':'출하계획 등록')}
+                </button>
+                {editId && (
+                  <button onClick={()=>{setEditId(null);setForm(EMPTY_FORM)}} style={S.cancelBtn}>취소</button>
+                )}
+              </div>
             </div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
 
 const S = {
-  wrap:   {padding:'16px',background:'#f8fafc',minHeight:'100%'},
-  topBar: {display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:16,
-           background:'#fff',borderRadius:10,padding:'14px 18px',border:'1px solid #e5e7eb'},
+  wrap:    {padding:16,background:'#f8fafc',minHeight:'100%',display:'flex',flexDirection:'column',gap:12},
+  topBar:  {background:'#fff',borderRadius:10,padding:'14px 18px',border:'1px solid #e5e7eb',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:10,flexShrink:0},
   pageTitle:{fontSize:18,fontWeight:700,color:'#111827'},
-  sub:    {fontSize:12,color:'#6b7280',marginTop:2},
-  monthSummary:{textAlign:'right'},
-  summaryLabel:{fontSize:11,color:'#6b7280'},
-  summaryValue:{fontSize:22,fontWeight:700,color:'#1e40af'},
+  sub:     {fontSize:12,color:'#6b7280',marginTop:2},
+  summary: {textAlign:'right'},
+  uploadBtn:{padding:'8px 14px',background:'#f3f4f6',border:'1px solid #d1d5db',borderRadius:7,cursor:'pointer',fontSize:12,fontWeight:600,color:'#374151',fontFamily:'inherit'},
 
-  calWrap:  {display:'flex',gap:14,alignItems:'flex-start'},
-  calBox:   {flex:1,background:'#fff',borderRadius:10,border:'1px solid #e5e7eb',padding:14,overflow:'hidden'},
-  calHeader:{display:'flex',alignItems:'center',gap:8,marginBottom:10},
-  calTitle: {flex:1,textAlign:'center',fontSize:15,fontWeight:700,color:'#111827'},
-  navBtn:   {background:'none',border:'1px solid #e5e7eb',borderRadius:6,width:28,height:28,cursor:'pointer',fontSize:16,color:'#374151'},
-  todayBtn: {padding:'3px 10px',background:'#f3f4f6',border:'1px solid #e5e7eb',borderRadius:6,fontSize:11,cursor:'pointer',color:'#374151',fontFamily:'inherit'},
+  calBox:  {background:'#fff',borderRadius:10,border:'1px solid #e5e7eb',padding:16,flex:1},
+  calHeader:{display:'flex',alignItems:'center',gap:8,marginBottom:12},
+  calTitle: {flex:1,textAlign:'center',fontSize:16,fontWeight:700,color:'#111827'},
+  navBtn:  {background:'none',border:'1px solid #e5e7eb',borderRadius:6,width:32,height:32,cursor:'pointer',fontSize:18,color:'#374151'},
+  todayBtn:{padding:'4px 12px',background:'#f3f4f6',border:'1px solid #e5e7eb',borderRadius:6,fontSize:12,cursor:'pointer',color:'#374151',fontFamily:'inherit'},
 
-  grid7:    {display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:3},
-  dayHead:  {textAlign:'center',fontSize:11,fontWeight:600,padding:'4px 0'},
-  emptyCell:{minHeight:72},
-  cell:     {minHeight:72,borderRadius:6,padding:5,cursor:'pointer',transition:'all 0.1s',overflow:'hidden'},
+  grid7:   {display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:4},
+  dayHead: {textAlign:'center',fontSize:12,fontWeight:600,padding:'6px 0'},
+  emptyCell:{minHeight:100},
+  cell:    {minHeight:100,borderRadius:7,padding:6,cursor:'pointer',transition:'box-shadow 0.1s',':hover':{boxShadow:'0 2px 8px rgba(0,0,0,0.1)'}},
+  legend:  {display:'flex',gap:16,marginTop:12,flexWrap:'wrap'},
+  lgItem:  {display:'flex',alignItems:'center',gap:5,fontSize:11,color:'#6b7280'},
+  lgDot:   {width:12,height:12,borderRadius:3,flexShrink:0},
 
-  legend:   {display:'flex',gap:12,marginTop:10,flexWrap:'wrap'},
-  lgItem:   {display:'flex',alignItems:'center',gap:4,fontSize:11,color:'#6b7280'},
-  lgDot:    {width:12,height:12,borderRadius:3,flexShrink:0},
-
-  sidePanel:{width:220,background:'#fff',borderRadius:10,border:'1px solid #e5e7eb',padding:14,flexShrink:0},
-  sidePanelTitle:{fontSize:13,fontWeight:700,color:'#111827',marginBottom:10,paddingBottom:8,borderBottom:'1px solid #f3f4f6'},
-  planCard: {background:'#f8fafc',borderRadius:7,padding:'8px 10px',border:'1px solid #e5e7eb'},
-  addBox:   {background:'#f8fafc',borderRadius:7,padding:10,border:'1px dashed #d1d5db'},
-  inp:      {padding:'6px 8px',border:'1px solid #d1d5db',borderRadius:6,fontSize:12,outline:'none',fontFamily:'inherit',color:'#111827',width:'100%',boxSizing:'border-box'},
-  saveBtn:  {width:'100%',padding:'7px',background:'#1e40af',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:'inherit'},
+  modalBg: {position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:2000,display:'flex',alignItems:'center',justifyContent:'center',padding:16},
+  modalBox:{background:'#fff',borderRadius:12,width:'100%',maxWidth:520,maxHeight:'90vh',overflowY:'auto',boxShadow:'0 20px 60px rgba(0,0,0,0.2)'},
+  modalHeader:{padding:'16px 20px',borderBottom:'1px solid #f3f4f6',display:'flex',justifyContent:'space-between',alignItems:'flex-start'},
+  closeBtn:{background:'none',border:'none',fontSize:18,cursor:'pointer',color:'#9ca3af',padding:4},
+  sectionLabel:{fontSize:12,fontWeight:700,color:'#374151',marginBottom:8,textTransform:'uppercase',letterSpacing:'0.05em'},
+  planCard:{background:'#f8fafc',borderRadius:8,padding:'10px 12px',marginBottom:8,border:'1px solid #e5e7eb'},
+  editBtn: {padding:'4px 10px',background:'#f3f4f6',border:'1px solid #d1d5db',borderRadius:5,cursor:'pointer',fontSize:11,fontFamily:'inherit'},
+  delBtn:  {padding:'4px 10px',background:'#fee2e2',border:'1px solid #fca5a5',borderRadius:5,cursor:'pointer',fontSize:11,color:'#dc2626',fontFamily:'inherit'},
+  formBox: {padding:'0 20px 20px'},
+  formGrid:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10},
+  field:   {display:'flex',flexDirection:'column',gap:4},
+  label:   {fontSize:11,fontWeight:600,color:'#374151'},
+  inp:     {padding:'8px 10px',border:'1px solid #d1d5db',borderRadius:6,fontSize:13,outline:'none',fontFamily:'inherit',color:'#111827'},
+  saveBtn: {padding:'9px',background:'#1e40af',color:'#fff',border:'none',borderRadius:7,cursor:'pointer',fontSize:13,fontWeight:700,fontFamily:'inherit'},
+  cancelBtn:{padding:'9px 16px',background:'#f3f4f6',color:'#374151',border:'1px solid #d1d5db',borderRadius:7,cursor:'pointer',fontSize:13,fontFamily:'inherit'},
 }
