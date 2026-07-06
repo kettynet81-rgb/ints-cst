@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef } from 'react'
-import { collection, addDoc, deleteDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore'
+import { collection, addDoc, deleteDoc, doc, updateDoc, writeBatch, serverTimestamp } from 'firebase/firestore'
+import { ITEMS } from '../data/items'
 import { db } from '../firebase'
 import { useAuth } from '../contexts/AuthContext'
 import { writeLog } from '../utils/logger'
@@ -16,7 +17,7 @@ const MONTHS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','
 
 const EMPTY_FORM = { qty:'', serial:'', orderNo:'', timeSlot:'오전', memo:'' }
 
-export default function ShipmentCalendar({ transactions }) {
+export default function ShipmentCalendar({ transactions, stockMap = {} }) {
   const { userData } = useAuth()
   const today = new Date()
   const [year,  setYear]  = useState(today.getFullYear())
@@ -59,6 +60,40 @@ export default function ShipmentCalendar({ transactions }) {
     setModal({ date })
     setForm(EMPTY_FORM)
     setEditId(null)
+  }
+
+
+  const confirmShipment = async (plan) => {
+    const short = ITEMS.filter(i => (stockMap[i.code]||0) < i.needPerSet * plan.setQty)
+    if (short.length > 0) {
+      const ok = window.confirm(`⚠ 재고 부족 ${short.length}품목\n${short.slice(0,5).map(i=>`${i.code} (${i.needPerSet*plan.setQty-(stockMap[i.code]||0)}개 부족)`).join('\n')}\n\n그래도 출하 확정하시겠습니까?`)
+      if (!ok) return
+    } else {
+      if (!window.confirm(`${plan.date} / ${plan.setQty}EA 출하 확정하시겠습니까?\n재고에서 자동 차감됩니다.`)) return
+    }
+    const batch = writeBatch(db)
+    for (const item of ITEMS) {
+      batch.set(doc(collection(db,'transactions')), {
+        type:'출고', itemCode:item.code, itemName:item.name,
+        quantity: item.needPerSet * plan.setQty,
+        date: plan.date,
+        memo: `제품출하 ${plan.setQty}EA${plan.memo?' / '+plan.memo:''}`,
+        shipmentId: plan.shipmentId, createdAt: serverTimestamp(),
+      })
+    }
+    await updateDoc(doc(db,'transactions',plan.id), { status:'confirmed' })
+    await batch.commit()
+    await writeLog({ action:'출하확정', target:'출하계획', docId:plan.id, after:{ date:plan.date, setQty:plan.setQty }, user:userData?.name||'' })
+  }
+
+  const cancelShipment = async (plan) => {
+    if (!window.confirm('출하 확정을 취소하시겠습니까?\n차감된 재고가 복구됩니다.')) return
+    const batch = writeBatch(db)
+    transactions.filter(t => t.type==='출고' && t.shipmentId===plan.shipmentId)
+      .forEach(t => batch.delete(doc(db,'transactions',t.id)))
+    batch.update(doc(db,'transactions',plan.id), { status:'planned' })
+    await batch.commit()
+    await writeLog({ action:'확정취소', target:'출하계획', docId:plan.id, before:{ date:plan.date, setQty:plan.setQty }, user:userData?.name||'' })
   }
 
   const savePlan = async () => {
@@ -381,12 +416,22 @@ export default function ShipmentCalendar({ transactions }) {
                         {p.orderNo && <div style={{fontSize:12,color:'#374151',marginTop:2}}>🔖 발주번호: {p.orderNo}</div>}
                         {p.memo    && <div style={{fontSize:11,color:'#6b7280',marginTop:2}}>{p.memo}</div>}
                       </div>
-                      {p.status !== 'confirmed' && (
-                        <div style={{display:'flex',gap:6,flexShrink:0,marginLeft:8}}>
-                          <button onClick={()=>startEdit(p)} style={S.editBtn}>수정</button>
-                          <button onClick={()=>deletePlan(p)} style={S.delBtn}>삭제</button>
-                        </div>
-                      )}
+                      <div style={{display:'flex',gap:6,flexShrink:0,marginLeft:8,flexDirection:'column',alignItems:'flex-end'}}>
+                        {p.status === 'confirmed' ? (
+                          <button onClick={()=>cancelShipment(p)} style={{...S.editBtn,color:'#7c3aed',borderColor:'#c4b5fd'}}>확정취소</button>
+                        ) : (
+                          <>
+                            <button onClick={()=>confirmShipment(p)}
+                              style={{padding:'5px 10px',background:'#065f46',color:'#fff',border:'none',borderRadius:5,cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:'inherit',whiteSpace:'nowrap'}}>
+                              출하 확정
+                            </button>
+                            <div style={{display:'flex',gap:4}}>
+                              <button onClick={()=>startEdit(p)} style={S.editBtn}>수정</button>
+                              <button onClick={()=>deletePlan(p)} style={S.delBtn}>삭제</button>
+                            </div>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}

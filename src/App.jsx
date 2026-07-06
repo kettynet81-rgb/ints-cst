@@ -152,7 +152,7 @@ function MainApp() {
             : page==='inbound'   ? <InboundManage transactions={transactions} />
             : page==='shipment'  ? <ShipmentManage transactions={transactions} stockMap={stockMap} />
             : page==='history'   ? <History transactions={transactions} />
-            : page==='shipcal'   ? <ShipmentCalendar transactions={transactions} onNavigate={setPage}/>
+            : page==='shipcal'   ? <ShipmentCalendar transactions={transactions} stockMap={stockMap} onNavigate={setPage}/>
             : page==='admin'     ? <AdminPage />
             : null}
         </main>
