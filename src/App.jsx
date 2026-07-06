@@ -67,8 +67,8 @@ function MainApp() {
   return (
     <div style={S.root}>
       <aside style={{...S.sidebar, width: sideCollapsed ? 60 : 220}}>
-        <div style={S.logoArea}>
-          <button style={S.logoBtn} onClick={()=>setPage('dashboard')} title="홈으로">
+        <div style={{...S.logoArea, justifyContent: sideCollapsed?'center':'flex-start'}}>
+          <button style={{...S.logoBtn, display: sideCollapsed?'none':'flex'}} onClick={()=>setPage('dashboard')} title="홈으로">
             <img src="/ints-logo.png" alt="INTS"
               style={{height:28,objectFit:'contain',display:'block'}}
               onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}}
@@ -178,10 +178,10 @@ export default function App() {
 const S = {
   root: {display:'flex',height:'100vh',overflow:'hidden',background:'#f1f5f9'},
   sidebar: {background:'#0f172a',display:'flex',flexDirection:'column',flexShrink:0,transition:'width 0.2s',overflow:'hidden'},
-  logoArea: {padding:'12px 12px',display:'flex',alignItems:'center',gap:8,borderBottom:'1px solid #1e293b',flexShrink:0,background:'#fff'},
+  logoArea: {padding:'10px 8px',display:'flex',alignItems:'center',gap:6,borderBottom:'1px solid #1e293b',flexShrink:0,background:'#fff',minWidth:0,overflow:'visible'},
   logoBtn:  {background:'none',border:'none',cursor:'pointer',padding:'2px 4px',borderRadius:6,flexShrink:0,display:'flex',alignItems:'center'},
   logoSub:  {fontSize:10,color:'#94a3b8',marginTop:1},
-  collapseBtn:{marginLeft:'auto',background:'none',border:'none',color:'#475569',cursor:'pointer',fontSize:16,padding:'2px 4px',flexShrink:0},
+  collapseBtn:{marginLeft:'auto',background:'#f1f5f9',border:'1px solid #e2e8f0',borderRadius:5,color:'#374151',cursor:'pointer',fontSize:14,padding:'4px 7px',flexShrink:0,fontWeight:700},
   groupLabel: {fontSize:10,fontWeight:700,color:'#475569',letterSpacing:1.2,textTransform:'uppercase',padding:'4px 10px 5px'},
   navItem:  {display:'flex',alignItems:'center',gap:10,width:'100%',padding:'8px 10px',background:'none',border:'none',color:'#94a3b8',cursor:'pointer',borderRadius:6,fontFamily:'inherit',fontWeight:500,fontSize:13,textAlign:'left',marginBottom:1},
   navActive:{display:'flex',alignItems:'center',gap:10,width:'100%',padding:'8px 10px',background:'#1e293b',border:'none',color:'#f1f5f9',cursor:'pointer',borderRadius:6,fontFamily:'inherit',fontWeight:700,fontSize:13,textAlign:'left',marginBottom:1,borderLeft:'3px solid #3b82f6'},
