@@ -20,23 +20,21 @@ export function downloadRecallTemplate() {
     ['', '', '', '', '', '', ''],
     // 7행: 헤더
     ['RFID NO', '교체 항목', '유·무상', '차수', '반출일', '반입일', '비고'],
-    // 8~: 예시 데이터
-    ['IFZD412', '견시창 교체', '유상', '12차', '2026-07-07', '', 'RFID 구형'],
-    ['IFZD413', '내부 볼트 파손, 반사판 교체', '무상', '12차', '2026-07-07', '2026-07-10', '신형TYPE'],
-    ['IFZE001', 'RFID 교체', '무상', '12차', '2026-07-07', '', 'RFID 신형'],
+    // 8행: 예시 (흐리게 표시됨 - 삭제 후 실제 데이터 입력)
+    ['▶ 예시) IFZD412', '견시창 교체, RFID 교체', '유상', '12차', '2026-07-07', '2026-07-10', 'RFID 구형'],
   ]
 
   const ws = XLSX.utils.aoa_to_sheet(aoa)
 
   // 컬럼 너비
   ws['!cols'] = [
-    {wch:12}, {wch:32}, {wch:8}, {wch:8}, {wch:13}, {wch:13}, {wch:20}
+    {wch:14}, {wch:32}, {wch:8}, {wch:8}, {wch:13}, {wch:13}, {wch:20}
   ]
 
   // 행 높이
   ws['!rows'] = [
     {hpt:28}, {hpt:6}, {hpt:16}, {hpt:16}, {hpt:16},
-    {hpt:8}, {hpt:22}, {hpt:18}, {hpt:18}, {hpt:18}
+    {hpt:8}, {hpt:22}, {hpt:20}
   ]
 
   // 병합: 제목행
@@ -80,24 +78,17 @@ export function downloadRecallTemplate() {
     }
   })
 
-  // 예시 데이터 행
-  for (let r = 7; r <= 9; r++) {
-    const rowNum = r + 1
-    const bg = r % 2 === 0 ? 'F8FAFC' : 'FFFFFF'
-    'ABCDEFG'.split('').forEach(col => {
-      const addr = `${col}${rowNum}`
-      if (!ws[addr]) ws[addr] = {v:'', t:'s'}
-      ws[addr].s = {
-        fill:      { fgColor:{rgb: bg} },
-        alignment: { horizontal: ['C','D'].includes(col)?'center':'left', vertical:'center' },
-        border: {
-          bottom: { style:'thin', color:{rgb:'E5E7EB'} },
-          right:  { style:'thin', color:{rgb:'E5E7EB'} },
-        },
-        font: col==='A' ? { bold:true, color:{rgb:'1E40AF'} } : {}
-      }
-    })
-  }
+  // 예시 행 - 흐리게 (삭제하고 입력하라는 표시)
+  'ABCDEFG'.split('').forEach(col => {
+    const addr = `${col}8`
+    if (!ws[addr]) ws[addr] = {v:'', t:'s'}
+    ws[addr].s = {
+      fill:      { fgColor:{rgb:'F1F5F9'} },
+      font:      { color:{rgb:'94A3B8'}, italic:true, sz:10 },
+      alignment: { horizontal: ['C','D'].includes(col)?'center':'left', vertical:'center' },
+      border:    { bottom:{ style:'dashed', color:{rgb:'CBD5E1'} } }
+    }
+  })
 
   XLSX.utils.book_append_sheet(wb, ws, '리콜수리 입력양식')
   XLSX.writeFile(wb, 'CST_리콜수리_입력양식.xlsx')
