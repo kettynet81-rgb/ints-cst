@@ -191,12 +191,19 @@ export default function InboundManage({ transactions }) {
           <span style={S.cardSub}>총 {inbounds.length}건 · 행 클릭하면 수정</span>
         </div>
         <div style={S.tableWrap}>
-          <table style={S.table}>
+          <table style={{...S.table, tableLayout:'fixed'}}>
+            <colgroup>
+              <col style={{width:100}}/>
+              <col style={{width:70}}/>
+              <col/>
+              <col style={{width:100}}/>
+              <col style={{width:'26%'}}/>
+              <col style={{width:80}}/>
+            </colgroup>
             <thead>
               <tr>
                 {['날짜','코드','품목명','수량 (EA)','메모',''].map((h,i) => (
-                  <th key={i} style={{...S.th, textAlign:i===3?'right':'left',
-                    width:i===0?110:i===1?65:i===3?100:i===5?90:'auto'}}>{h}</th>
+                  <th key={i} style={{...S.th, textAlign:i===3?'right':'left'}}>{h}</th>
                 ))}
               </tr>
             </thead>
