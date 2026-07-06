@@ -37,8 +37,6 @@ export default function Dashboard({ transactions, stockMap }) {
         <SumItem label="조립가능 SET" value={`${minSet.toLocaleString()} SET`} color="#1e40af"/>
         <div style={S.div}/>
         <SumItem label="재고없음" value={`${emptyCount}품목`} color="#dc2626"/>
-        <div style={S.div}/>
-        <SumItem label={`발주필요 (${baseQty||112}SET 기준)`} value={`${lowCount}품목`} color="#d97706"/>
       </div>
 
       {/* 테이블 카드 */}
@@ -56,21 +54,6 @@ export default function Dashboard({ transactions, stockMap }) {
               style={{padding:'4px 12px',background:'#16a34a',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontFamily:'inherit',fontWeight:700,fontSize:12}}>
               ⬇ 엑셀
             </button>
-            <div style={S.div}/>
-            {/* 발주기준 */}
-            <div style={{display:'flex',alignItems:'center',gap:5}}>
-              <span style={{fontSize:11,color:'#94a3b8'}}>발주기준</span>
-              <input type="number" min="1" value={lowQty} onChange={e=>setLowQty(e.target.value)}
-                style={{width:50,padding:'3px 6px',border:'1.5px solid #fde68a',borderRadius:5,fontSize:13,fontWeight:700,textAlign:'center',fontFamily:'inherit',outline:'none'}}/>
-              <span style={{fontSize:11,color:'#94a3b8'}}>SET</span>
-            </div>
-            <div style={S.div}/>
-            {/* 기준 SET */}
-            <div style={{display:'flex',alignItems:'center',gap:5}}>
-              <span style={{fontSize:11,color:'#94a3b8'}}>기준 SET</span>
-              <input type="number" min="1" value={baseQty} onChange={e=>setBaseQty(e.target.value)}
-                style={{width:58,padding:'3px 6px',border:'1.5px solid #e2e8f0',borderRadius:5,fontSize:13,fontWeight:700,textAlign:'center',fontFamily:'inherit',outline:'none'}}/>
-            </div>
             <div style={S.div}/>
             {/* 시뮬레이션 */}
             <div style={{display:'flex',alignItems:'center',gap:5}}>
