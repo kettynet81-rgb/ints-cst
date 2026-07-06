@@ -355,20 +355,6 @@ function PartsOutbound({ transactions }) {
   const qtyRef  = useRef(null)
   const memoRef = useRef(null)
 
-  const setF = (k,v) => setForm(f=>({...f,[k]:v}))
-  const toggleSelect = (id) => setSelected(s => { const n=new Set(s); n.has(id)?n.delete(id):n.add(id); return n })
-  const selectAll    = () => setSelected(new Set(plans.filter(p=>p.status!=='confirmed').map(p=>p.id)))
-  const clearSelect  = () => setSelected(new Set())
-  const deleteSelected = async () => {
-    if (selected.size===0) return
-    if (!window.confirm(`선택한 ${selected.size}건을 삭제하시겠습니까?`)) return
-    for (const id of selected) {
-      const plan = plans.find(p=>p.id===id)
-      await deleteDoc(doc(db,'transactions',id))
-      if (plan) await writeLog({ action:'삭제', target:'출하계획', docId:id, before:{date:plan.date,setQty:plan.setQty}, user:userData?.name||'' })
-    }
-    setSelected(new Set())
-  }
   const codeUpper = form.itemCode.trim().toUpperCase()
   const foundItem = ITEMS.find(i=>i.code===codeUpper) || ITEMS.find(i=>i.code==='A'+codeUpper)
   const isReady = form.date && foundItem && form.quantity && Number(form.quantity)>0
