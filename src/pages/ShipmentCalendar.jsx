@@ -252,9 +252,9 @@ export default function ShipmentCalendar({ transactions, stockMap = {} }) {
     let count = 0
     for (const t of targets) {
       if (!t.date) continue
-      const d = new Date(t.date + 'T00:00:00')
-      d.setDate(d.getDate() + 1)
-      const newDate = d.toISOString().slice(0,10)
+      const parts = t.date.split('-').map(Number)
+      const d = new Date(parts[0], parts[1]-1, parts[2]+1)
+      const newDate = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
       await updateDoc(doc(db,'transactions',t.id), { date: newDate })
       count++
     }
