@@ -109,22 +109,28 @@ export default function ShipmentCalendar({ transactions }) {
     const wb = XLSX.read(buf, { cellDates: true })
     const plans = []
 
-    // Excel 날짜 → YYYY-MM-DD 변환 (Date객체 또는 시리얼 숫자 모두 처리)
+    // Excel 날짜 → YYYY-MM-DD 변환 (ISO문자열/Date객체/시리얼 숫자 모두 처리)
     const toDateStr = (v) => {
       if (!v) return null
-      if (v instanceof Date) {
+      // ISO 문자열: "2026-05-31T00:00:00.000Z"
+      if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(v)) return v.slice(0,10)
+      // 일반 날짜 문자열: "2026-05-31"
+      if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v
+      // Date 객체
+      if (v instanceof Date && !isNaN(v.getTime())) {
         const d = new Date(v.getTime() - v.getTimezoneOffset()*60000)
         return d.toISOString().slice(0,10)
       }
+      // Excel 시리얼 숫자
       if (typeof v === 'number' && v > 40000 && v < 60000) {
-        // Excel 시리얼 → JS Date (1900 기준, 25569 오프셋)
         const d = new Date(Math.round((v - 25569) * 86400 * 1000))
         return d.toISOString().slice(0,10)
       }
       return null
     }
 
-    wb.SheetNames.forEach(sname => {
+    const validSheets = wb.SheetNames.filter(s => !s.includes('신규'))
+    validSheets.forEach(sname => {
       const ws = wb.Sheets[sname]
       const rows = XLSX.utils.sheet_to_json(ws, { header:1, raw:true, defval:null })
       let currentDates = []
