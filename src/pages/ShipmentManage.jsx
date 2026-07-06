@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import { collection, addDoc, deleteDoc, doc, updateDoc, writeBatch, serverTimestamp, getDocs, query, where } from 'firebase/firestore'
+import { writeLog } from '../utils/logger'
 import { db } from '../firebase'
 import { ITEMS } from '../data/items'
 
@@ -74,6 +75,7 @@ function ProductShipment({ transactions, stockMap }) {
       itemCode:'SET', itemName:'CST SET 출하', quantity: qty,
       createdAt: serverTimestamp(),
     })
+    await writeLog({ action:'입력', target:'출하계획', after:{ date:form.date, setQty:qty, memo:form.memo }, user:userData?.name||'' })
     setForm({ date:'', setQty:'', memo:'' })
     setSaving(false); setSaved(true)
     setTimeout(() => { setSaved(false); qtyRef.current?.focus() }, 1500)
@@ -98,6 +100,7 @@ function ProductShipment({ transactions, stockMap }) {
     }
     await updateDoc(doc(db, 'transactions', plan.id), { status:'confirmed' })
     await batch.commit()
+    await writeLog({ action:'출하확정', target:'출하계획', docId:plan.id, after:{ date:plan.date, setQty:plan.setQty }, user:userData?.name||'' })
     setConf(null)
   }
 
@@ -113,6 +116,7 @@ function ProductShipment({ transactions, stockMap }) {
     // 계획 상태 복구
     batch.update(doc(db,'transactions',plan.id), { status:'planned' })
     await batch.commit()
+    await writeLog({ action:'확정취소', target:'출하계획', docId:plan.id, before:{ date:plan.date, setQty:plan.setQty }, user:userData?.name||'' })
     setConf(null)
   }
 
@@ -127,6 +131,7 @@ function ProductShipment({ transactions, stockMap }) {
       quantity: Number(editPlan.setQty),
       memo: editPlan.memo,
     })
+    await writeLog({ action:'수정', target:'출하계획', docId:editPlanId, after:{ date:editPlan.date, setQty:editPlan.setQty, memo:editPlan.memo }, user:userData?.name||'' })
     setEditPlanId(null)
   }
 
@@ -142,6 +147,7 @@ function ProductShipment({ transactions, stockMap }) {
       related.forEach(t => batch.delete(doc(db, 'transactions', t.id)))
     }
     await batch.commit()
+    await writeLog({ action:'삭제', target:'출하계획', docId:plan.id, before:{ date:plan.date, setQty:plan.setQty }, user:userData?.name||'' })
     setDel(null)
   }
 
@@ -322,6 +328,7 @@ function PartsOutbound({ transactions }) {
       quantity:Number(form.quantity), memo:form.memo.trim(),
       createdAt:serverTimestamp(),
     })
+    await writeLog({ action:'입력', target:'부품출고', after:{ date:form.date, itemCode:foundItem.code, quantity:Number(form.quantity), memo:form.memo }, user:userData?.name||'' })
     setForm({date:'',itemCode:'',quantity:'',memo:''})
     setSaving(false); setSaved(true)
     setTimeout(()=>{setSaved(false);codeRef.current?.focus()},1500)
@@ -333,12 +340,16 @@ function PartsOutbound({ transactions }) {
       itemName:ITEM_MAP[editData.itemCode]||'',
       quantity:Number(editData.quantity), memo:editData.memo,
     })
+    await writeLog({ action:'수정', target:'부품출고', docId:editId, after:{ date:editData.date, itemCode:editData.itemCode, quantity:Number(editData.quantity) }, user:userData?.name||'' })
     setEditId(null)
   }
 
   const deleteRow = async (id) => {
     if (!window.confirm('삭제하시겠습니까?')) return
-    setDel(id); await deleteDoc(doc(db,'transactions',id)); setDel(null)
+    const t = transactions.find(x=>x.id===id)
+    setDel(id); await deleteDoc(doc(db,'transactions',id))
+    await writeLog({ action:'삭제', target:'부품출고', docId:id, before:{ date:t?.date, itemCode:t?.itemCode, quantity:t?.quantity }, user:userData?.name||'' })
+    setDel(null)
   }
 
   return (

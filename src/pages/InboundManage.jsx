@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import { collection, addDoc, deleteDoc, doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore'
+import { writeLog } from '../utils/logger'
 import { db } from '../firebase'
 import { useAuth } from '../contexts/AuthContext'
 import { ITEMS } from '../data/items'
@@ -60,6 +61,7 @@ export default function InboundManage({ transactions }) {
       quantity:Number(form.quantity), memo:form.memo.trim(),
       createdAt:serverTimestamp(),
     })
+    await writeLog({ action:'입력', target:'입고기록', docId:'', after:{ date:form.date, itemCode:item.code, itemName:item.name, quantity:Number(form.quantity), memo:form.memo }, user: userData?.name||'알수없음' })
     setForm({ date:'', itemCode:'', quantity:'', memo:'' })
     setSaving(false); setSaved(true)
     setTimeout(() => { setSaved(false); codeRef.current?.focus() }, 1500)
@@ -69,16 +71,7 @@ export default function InboundManage({ transactions }) {
     const before = inbounds.find(t => t.id === editId)
     const after = { date:editData.date, itemCode:editData.itemCode, itemName:ITEM_MAP[editData.itemCode]||'', quantity:Number(editData.quantity), memo:editData.memo }
     await updateDoc(doc(db, 'transactions', editId), after)
-    // 변경 로그 저장
-    await addDoc(collection(db, 'logs'), {
-      action: '수정',
-      target: '입고기록',
-      docId: editId,
-      before: { date:before?.date, itemCode:before?.itemCode, itemName:before?.itemName, quantity:before?.quantity, memo:before?.memo||'' },
-      after,
-      user: userData?.name || '알수없음',
-      createdAt: serverTimestamp(),
-    })
+    await writeLog({ action:'수정', target:'입고기록', docId:editId, before:{ date:before?.date, itemCode:before?.itemCode, quantity:before?.quantity, memo:before?.memo||'' }, after, user:userData?.name||'알수없음' })
     setEditId(null)
   }
 
@@ -86,15 +79,7 @@ export default function InboundManage({ transactions }) {
     if (!window.confirm('삭제하시겠습니까?')) return
     const target = inbounds.find(t => t.id === id)
     setDel(id)
-    await addDoc(collection(db, 'logs'), {
-      action: '삭제',
-      target: '입고기록',
-      docId: id,
-      before: { date:target?.date, itemCode:target?.itemCode, itemName:target?.itemName, quantity:target?.quantity, memo:target?.memo||'' },
-      after: null,
-      user: userData?.name || '알수없음',
-      createdAt: serverTimestamp(),
-    })
+    await writeLog({ action:'삭제', target:'입고기록', docId:id, before:{ date:target?.date, itemCode:target?.itemCode, quantity:target?.quantity }, user:userData?.name||'알수없음' })
     await deleteDoc(doc(db,'transactions',id))
     setDel(null)
   }
