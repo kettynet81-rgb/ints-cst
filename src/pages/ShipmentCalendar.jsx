@@ -106,43 +106,56 @@ export default function ShipmentCalendar({ transactions }) {
     const file = e.target.files[0]
     if (!file) return
     const buf = await file.arrayBuffer()
-    const wb = XLSX.read(buf)
+    const wb = XLSX.read(buf, { cellDates: true })
     const plans = []
 
     wb.SheetNames.forEach(sname => {
       const ws = wb.Sheets[sname]
-      const rows = XLSX.utils.sheet_to_json(ws, { header:1, raw:false, defval:'' })
+      const rows = XLSX.utils.sheet_to_json(ws, { header:1, raw:true, defval:null })
       let currentDates = []
 
       rows.forEach(row => {
-        // 날짜 행 감지
-        const dates = row.slice(1).map(v => {
+        // 날짜 행 감지 (Date 객체 또는 날짜 문자열)
+        const dateCells = row.slice(1).map(v => {
           if (!v) return null
-          const d = new Date(v)
-          return isNaN(d.getTime()) ? null : d.toISOString().slice(0,10)
+          if (v instanceof Date) return v.toISOString().slice(0,10)
+          return null
         })
-        if (dates.some(d => d)) {
-          currentDates = [null, ...dates]
+        if (dateCells.some(d => d)) {
+          currentDates = [null, ...dateCells]
           return
         }
+
         // 내용 행 파싱
         row.slice(1).forEach((cell, ci) => {
           const date = currentDates[ci+1]
-          if (!date || !cell || !cell.trim()) return
-          // "56EA(IFZF001~056)오전\n발주번호:2064697146" 같은 형태 파싱
-          const lines = cell.split('\n').map(l => l.trim()).filter(Boolean)
+          if (!date || !cell) return
+          const text = String(cell).trim()
+          if (!text) return
+
+          // 셀 안에서 EA로 시작하는 블록 단위로 분리
+          const lines = text.split(/\n/).map(l => l.trim()).filter(Boolean)
+          const blocks = []
+          let cur = []
           lines.forEach(line => {
-            const qtyMatch  = line.match(/(\d+)EA/)
-            const serialMatch = line.match(/\(([^)]+)\)/)
-            const orderMatch  = line.match(/발주번호[:\s]*(\d+)/)
-            const timeMatch   = line.match(/오전|오후/)
-            if (qtyMatch) {
+            if (/^\d+EA/.test(line) && cur.length) { blocks.push(cur); cur = [line] }
+            else cur.push(line)
+          })
+          if (cur.length) blocks.push(cur)
+
+          blocks.forEach(block => {
+            const joined = block.join(' ')
+            const qtyM    = joined.match(/(\d+)EA/)
+            const serialM = joined.match(/\(([^)]+~[^)]+)\)/)
+            const orderM  = joined.match(/발주번호[:：\s]*(\d{10})/)
+            const timeM   = joined.match(/오전|오후/)
+            if (qtyM) {
               plans.push({
-                date, qty: Number(qtyMatch[1]),
-                serial: serialMatch ? serialMatch[1] : '',
-                orderNo: orderMatch ? orderMatch[1] : '',
-                timeSlot: timeMatch ? timeMatch[0] : '오전',
-                memo: line,
+                date, qty: Number(qtyM[1]),
+                serial:  serialM ? serialM[1].trim() : '',
+                orderNo: orderM  ? orderM[1] : '',
+                timeSlot: timeM  ? timeM[0] : '오전',
+                memo: block[0] || '',
               })
             }
           })
