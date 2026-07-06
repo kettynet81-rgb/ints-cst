@@ -166,7 +166,7 @@ export default function History({ transactions }) {
         <div style={S.card}>
           <div style={{padding:'10px 16px',borderBottom:'1px solid #f1f5f9',display:'flex',justifyContent:'space-between'}}>
             <span style={{fontSize:13,fontWeight:700,color:'#0f172a'}}>수정 로그</span>
-            <span style={{fontSize:11,color:'#94a3b8'}}>최근 200건 · 입고 수정/삭제 기록</span>
+            <span style={{fontSize:11,color:'#94a3b8'}}>최근 200건</span>
           </div>
           <div style={S.tableWrap}>
             <table style={S.table}>
@@ -185,24 +185,38 @@ export default function History({ transactions }) {
                   const ts = log.createdAt?.seconds
                     ? new Date(log.createdAt.seconds*1000).toLocaleString('ko-KR')
                     : ''
-                  const before = log.before
-                  const after  = log.after
+                  const parse = v => { try { return typeof v==='string' ? JSON.parse(v) : v } catch{ return v } }
+                  const before = parse(log.before)
+                  const after  = parse(log.after)
+                  const code   = after?.itemCode || before?.itemCode || '-'
+                  const target = log.target ? `[${log.target}] ` : ''
+                  const ACTION_STYLE = {
+                    '입력':   {bg:'#dcfce7',color:'#16a34a'},
+                    '수정':   {bg:'#fef3c7',color:'#d97706'},
+                    '삭제':   {bg:'#fee2e2',color:'#dc2626'},
+                    '출하확정':{bg:'#dbeafe',color:'#1d4ed8'},
+                    '확정취소':{bg:'#f3e8ff',color:'#7c3aed'},
+                  }
+                  const as = ACTION_STYLE[log.action] || {bg:'#f1f5f9',color:'#475569'}
+                  const fmtData = d => {
+                    if (!d) return '-'
+                    if (d.setQty) return `${d.date||''} / ${d.setQty}SET${d.memo?' / '+d.memo:''}`
+                    return `${d.date||''} / ${Number(d.quantity||0).toLocaleString()}EA${d.memo?' / '+d.memo:''}`
+                  }
                   return (
                     <tr key={log.id} style={{background:i%2===0?'#f8fafc':'#fff'}}>
                       <td style={{...S.td,fontSize:11,color:'#475569',whiteSpace:'nowrap'}}>{ts}</td>
-                      <td style={{...S.td,fontWeight:600}}>{log.user}</td>
+                      <td style={{...S.td,fontWeight:600}}>{log.user||'-'}</td>
                       <td style={{...S.td,textAlign:'center'}}>
-                        {log.action==='수정'
-                          ? <span style={{background:'#fef3c7',color:'#d97706',padding:'2px 8px',borderRadius:4,fontSize:11,fontWeight:700}}>수정</span>
-                          : <span style={{background:'#fee2e2',color:'#dc2626',padding:'2px 8px',borderRadius:4,fontSize:11,fontWeight:700}}>삭제</span>}
+                        <span style={{background:as.bg,color:as.color,padding:'2px 7px',borderRadius:4,fontSize:11,fontWeight:700,whiteSpace:'nowrap'}}>
+                          {log.action}
+                        </span>
+                        {log.target && <div style={{fontSize:9,color:'#94a3b8',marginTop:2}}>{log.target}</div>}
                       </td>
-                      <td style={{...S.td,fontWeight:700,color:'#1e40af'}}>{before?.itemCode}</td>
-                      <td style={{...S.td,fontSize:11,color:'#64748b'}}>
-                        {before ? `${before.date} / ${before.quantity?.toLocaleString()}EA / ${before.memo||''}` : '-'}
-                      </td>
-                      <td style={{...S.td,fontSize:11,color: log.action==='삭제'?'#dc2626':'#16a34a',fontWeight:500}}>
-                        {log.action==='삭제' ? '삭제됨'
-                          : after ? `${after.date} / ${after.quantity?.toLocaleString()}EA / ${after.memo||''}` : '-'}
+                      <td style={{...S.td,fontWeight:700,color:'#1e40af'}}>{code}</td>
+                      <td style={{...S.td,fontSize:11,color:'#64748b'}}>{fmtData(before)}</td>
+                      <td style={{...S.td,fontSize:11,color:log.action==='삭제'?'#dc2626':'#16a34a',fontWeight:500}}>
+                        {log.action==='삭제'?'삭제됨':fmtData(after)}
                       </td>
                     </tr>
                   )
