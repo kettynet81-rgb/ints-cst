@@ -45,7 +45,7 @@ export default function Dashboard({ transactions, stockMap }) {
       </div>
 
       {/* 테이블 카드 */}
-      <div style={{background:'#fff',borderRadius:8,border:'1px solid #e2e8f0',display:'flex',flexDirection:'column',flex:1,minHeight:0,overflow:'hidden'}}>
+      <div style={{background:'#fff',borderRadius:8,border:'1px solid #e2e8f0',display:'flex',flexDirection:'column',flex:1,minHeight:0,overflow:'hidden',maxWidth:960}}>
 
         {/* 카드 헤더 */}
         <div style={{padding:'10px 16px',borderBottom:'1px solid #f1f5f9',display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0}}>
@@ -93,7 +93,7 @@ export default function Dashboard({ transactions, stockMap }) {
 
         {/* 테이블 */}
         <div style={{overflowY:'auto',overflowX:'hidden',flex:1}}>
-          <table style={{width:'100%',borderCollapse:'collapse',tableLayout:'fixed'}}>
+          <table style={{width:'100%',maxWidth:900,borderCollapse:'collapse',tableLayout:'fixed'}}>
             <colgroup>
               <col style={{width:'7%'}}/>
               <col style={{width:'38%'}}/>
