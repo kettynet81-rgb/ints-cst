@@ -4,12 +4,14 @@ import { ITEMS } from '../data/items'
 
 export default function Dashboard({ transactions, stockMap }) {
   const [simQty,  setSimQty]  = useState('')
+  const [alarmQty, setAlarmQty] = useState('20')
   const [hoverRow, setHoverRow] = useState(null)
   const todayStr = new Date().toISOString().slice(0,10).replace(/-/g,'')
   const [baseQty,  setBaseQty]  = useState('112')
   const [lowQty,   setLowQty]   = useState('80')
 
-  const sim  = Number(simQty)
+  const sim   = Number(simQty)
+  const alarm = Number(alarmQty) || 20
   const base = Number(baseQty) || 0
   const low  = Number(lowQty)  || 80
 
@@ -17,15 +19,16 @@ export default function Dashboard({ transactions, stockMap }) {
     const stock      = stockMap[item.code] || 0
     const assemblable = Math.floor(stock / item.needPerSet)
     const surplus    = stock - item.needPerSet * base
-    const status     = stock === 0 ? 'empty' : assemblable < base ? 'low' : 'ok'
+    const status     = stock === 0 ? 'empty' : assemblable <= alarm ? 'low' : 'ok'
     const required   = sim > 0 ? item.needPerSet * sim : 0
     const shortage   = sim > 0 ? Math.max(0, required - stock) : 0
     const simStatus  = sim > 0 ? (shortage > 0 ? 'short' : 'ok') : null
     return { ...item, stock, assemblable, status, surplus, required, shortage, simStatus }
-  }), [stockMap, base, sim])
+  }), [stockMap, base, sim, alarm])
 
   const minSet     = Math.min(...itemStats.map(i => i.assemblable))
   const emptyCount = itemStats.filter(i => i.status === 'empty').length
+  const lowCount   = itemStats.filter(i => i.status === 'low').length
   const lowCount   = itemStats.filter(i => i.status === 'low').length
   const shortCount = itemStats.filter(i => i.simStatus === 'short').length
 
@@ -37,6 +40,8 @@ export default function Dashboard({ transactions, stockMap }) {
         <SumItem label="조립가능 SET" value={`${minSet.toLocaleString()} SET`} color="#1e40af"/>
         <div style={S.div}/>
         <SumItem label="재고없음" value={`${emptyCount}품목`} color="#dc2626"/>
+        <div style={S.div}/>
+        <SumItem label={`발주필요 (${alarm}SET 이하)`} value={`${lowCount}품목`} color="#d97706"/>
       </div>
 
       {/* 테이블 카드 */}
@@ -54,6 +59,14 @@ export default function Dashboard({ transactions, stockMap }) {
               style={{padding:'4px 12px',background:'#16a34a',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontFamily:'inherit',fontWeight:700,fontSize:12}}>
               ⬇ 엑셀
             </button>
+            <div style={S.div}/>
+            {/* 발주알람 */}
+            <div style={{display:'flex',alignItems:'center',gap:5}}>
+              <span style={{fontSize:11,color:'#94a3b8'}}>발주알람</span>
+              <input type="number" min="1" value={alarmQty} onChange={e=>setAlarmQty(e.target.value)}
+                style={{width:50,padding:'3px 6px',border:'1.5px solid #fde68a',borderRadius:5,fontSize:13,fontWeight:700,textAlign:'center',fontFamily:'inherit',outline:'none',background:'#fffbeb'}}/>
+              <span style={{fontSize:11,color:'#94a3b8'}}>SET↓</span>
+            </div>
             <div style={S.div}/>
             {/* 시뮬레이션 */}
             <div style={{display:'flex',alignItems:'center',gap:5}}>
