@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { db } from "../firebase"
-import { collection, onSnapshot, doc, updateDoc } from "firebase/firestore"
+import { collection, onSnapshot, doc, updateDoc, getDocs, writeBatch } from "firebase/firestore"
 import { useAuth } from "../contexts/AuthContext"
 
 const ROLE_LABEL = { pending:"대기", approved:"승인", admin:"관리자", rejected:"거절", blocked:"차단" }
@@ -16,7 +16,21 @@ export default function AdminPage() {
       setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() }))
         .sort((a,b) => {
           const order = { pending:0, approved:1, admin:2, rejected:3, blocked:4 }
-          return (order[a.role]||9) - (order[b.role]||9)
+          const runMigration = async () => {
+    if (!window.confirm('A1→A1-1, A8→A8-1, A14→A14-1\n기존 데이터를 일괄 변경합니다. 계속하시겠습니까?')) return
+    const MAP = { 'A1': 'A1-1', 'A8': 'A8-1', 'A14': 'A14-1' }
+    const snap = await getDocs(collection(db, 'transactions'))
+    const batch = writeBatch(db)
+    let count = 0
+    snap.docs.forEach(d => {
+      const newCode = MAP[d.data().itemCode]
+      if (newCode) { batch.update(doc(db, 'transactions', d.id), { itemCode: newCode }); count++ }
+    })
+    await batch.commit()
+    alert(`완료: ${count}건 변경되었습니다.`)
+  }
+
+  return (order[a.role]||9) - (order[b.role]||9)
         }))
     })
   }, [])
@@ -26,6 +40,20 @@ export default function AdminPage() {
   }
 
   const pendingCount = users.filter(u => u.role === "pending").length
+
+  const runMigration = async () => {
+    if (!window.confirm('A1→A1-1, A8→A8-1, A14→A14-1\n기존 데이터를 일괄 변경합니다. 계속하시겠습니까?')) return
+    const MAP = { 'A1': 'A1-1', 'A8': 'A8-1', 'A14': 'A14-1' }
+    const snap = await getDocs(collection(db, 'transactions'))
+    const batch = writeBatch(db)
+    let count = 0
+    snap.docs.forEach(d => {
+      const newCode = MAP[d.data().itemCode]
+      if (newCode) { batch.update(doc(db, 'transactions', d.id), { itemCode: newCode }); count++ }
+    })
+    await batch.commit()
+    alert(`완료: ${count}건 변경되었습니다.`)
+  }
 
   return (
     <div style={{padding:28}}>
