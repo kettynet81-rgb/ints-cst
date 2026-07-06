@@ -6,7 +6,7 @@ import { writeLog } from '../utils/logger'
 import * as XLSX from 'xlsx'
 
 const REPAIR_ITEMS = ['견시창 교체','반사판 교체','내부 볼트 파손','외부 볼트 파손','기타']
-const EMPTY_FORM = { rfid:'', repairItem:'견시창 교체', payType:'유상', round:'', outDate:'', inDate:'', memo:'' }
+const EMPTY_FORM = { rfid:'', repairItems:[], payType:'유상', round:'', outDate:'', inDate:'', memo:'' }
 
 const parseDate = (v) => {
   if (!v) return ''
@@ -79,11 +79,11 @@ export default function RecallManage() {
   const setF = (k,v) => setForm(f => ({...f,[k]:v}))
 
   const save = async () => {
-    if (!form.rfid.trim() || !form.round.trim()) return
+    if (!form.rfid.trim() || !form.round.trim() || form.repairItems.length===0) return
     setSaving(true)
     const data = {
       rfid: form.rfid.trim().toUpperCase(),
-      repairItem: form.repairItem,
+      repairItems: form.repairItems,
       payType: form.payType,
       round: form.round.trim(),
       outDate: parseDate(form.outDate),
@@ -104,7 +104,7 @@ export default function RecallManage() {
 
   const startEdit = (r) => {
     setEditId(r.id)
-    setForm({ rfid:r.rfid||'', repairItem:r.repairItem||'견시창 교체',
+    setForm({ rfid:r.rfid||'', repairItems:Array.isArray(r.repairItems)?r.repairItems:(r.repairItem?[r.repairItem]:[]),
       payType:r.payType||'유상', round:r.round||'',
       outDate:r.outDate||'', inDate:r.inDate||'', memo:r.memo||'' })
   }
@@ -173,10 +173,23 @@ export default function RecallManage() {
               placeholder="IFZD412" style={{...S.inp,width:110}} onKeyDown={e=>e.key==='Enter'&&save()}/>
           </div>
           <div style={S.field}>
-            <label style={S.label}>교체 항목</label>
-            <select value={form.repairItem} onChange={e=>setF('repairItem',e.target.value)} style={S.sel}>
-              {REPAIR_ITEMS.map(i=><option key={i}>{i}</option>)}
-            </select>
+            <label style={S.label}>교체 항목 (복수 선택)</label>
+            <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+              {REPAIR_ITEMS.map(item=>(
+                <label key={item} style={{display:'flex',alignItems:'center',gap:3,cursor:'pointer',
+                  padding:'4px 8px',border:'1px solid',borderRadius:5,fontSize:11,fontWeight:600,
+                  background:form.repairItems.includes(item)?'#1e40af':'#f9fafb',
+                  color:form.repairItems.includes(item)?'#fff':'#374151',
+                  borderColor:form.repairItems.includes(item)?'#1e40af':'#d1d5db'}}>
+                  <input type="checkbox" style={{display:'none'}}
+                    checked={form.repairItems.includes(item)}
+                    onChange={e=>setF('repairItems', e.target.checked
+                      ? [...form.repairItems,item]
+                      : form.repairItems.filter(x=>x!==item))}/>
+                  {item}
+                </label>
+              ))}
+            </div>
           </div>
           <div style={S.field}>
             <label style={S.label}>유·무상</label>
@@ -206,7 +219,7 @@ export default function RecallManage() {
           </div>
           <div style={{display:'flex',gap:6,alignItems:'flex-end',paddingBottom:1}}>
             <button onClick={save} disabled={saving||!form.rfid||!form.round}
-              style={{...S.saveBtn,opacity:saving||!form.rfid||!form.round?0.5:1}}>
+              style={{...S.saveBtn,opacity:saving||!form.rfid||!form.round||!form.repairItems.length?0.5:1}}>
               {saving?'저장 중...':(editId?'수정':'+ 추가')}
             </button>
             {editId && <button onClick={()=>{setEditId(null);setForm(EMPTY_FORM)}} style={S.cancelBtn}>취소</button>}
@@ -280,7 +293,7 @@ export default function RecallManage() {
                 outline:!r.inDate?'1px solid #fde68a':'none'}}>
                 <td style={{...S.td,textAlign:'center',color:'#9ca3af'}}>{i+1}</td>
                 <td style={{...S.td,fontWeight:700,color:'#1e40af',letterSpacing:1}}>{r.rfid}</td>
-                <td style={S.td}>{r.repairItem}</td>
+                <td style={S.td}>{(Array.isArray(r.repairItems)?r.repairItems:[r.repairItem||'']).join(', ')}</td>
                 <td style={{...S.td,textAlign:'center'}}>
                   <span style={{...S.tag, background:r.payType==='유상'?'#fee2e2':'#dbeafe',
                     color:r.payType==='유상'?'#dc2626':'#2563eb'}}>{r.payType}</span>
