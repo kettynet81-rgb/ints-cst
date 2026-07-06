@@ -55,11 +55,25 @@ function ProductShipment({ transactions, stockMap }) {
   const [saved, setSaved]     = useState(false)
   const [confirming, setConf] = useState(null)
   const [deleting, setDel]    = useState(null)
+  const [selected, setSelected] = useState(new Set())
   const dateRef = useRef(null)
   const qtyRef  = useRef(null)
   const memoRef = useRef(null)
 
   const setF = (k,v) => setForm(f=>({...f,[k]:v}))
+  const toggleSelect = (id) => setSelected(s => { const n=new Set(s); n.has(id)?n.delete(id):n.add(id); return n })
+  const selectAll    = () => setSelected(new Set(plans.filter(p=>p.status!=='confirmed').map(p=>p.id)))
+  const clearSelect  = () => setSelected(new Set())
+  const deleteSelected = async () => {
+    if (selected.size===0) return
+    if (!window.confirm(`선택한 ${selected.size}건을 삭제하시겠습니까?`)) return
+    for (const id of selected) {
+      const plan = plans.find(p=>p.id===id)
+      await deleteDoc(doc(db,'transactions',id))
+      if (plan) await writeLog({ action:'삭제', target:'출하계획', docId:id, before:{date:plan.date,setQty:plan.setQty}, user:userData?.name||'' })
+    }
+    setSelected(new Set())
+  }
   const qty = Number(form.setQty)
 
   const checkStock = (q) => ITEMS.every(i => (stockMap[i.code]||0) >= i.needPerSet * q)
@@ -214,12 +228,37 @@ function ProductShipment({ transactions, stockMap }) {
       <div style={S.card}>
         <div style={S.cardHead}>
           <span style={S.cardTitle}>출하 계획 목록</span>
-          <span style={S.cardSub}>총 {plans.length}건 · 확정 시 재고 자동 차감</span>
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
+            <span style={S.cardSub}>총 {plans.length}건 · 확정 시 재고 자동 차감</span>
+            {selected.size > 0 && (
+              <>
+                <span style={{fontSize:12,color:'#1e40af',fontWeight:600}}>{selected.size}건 선택</span>
+                <button onClick={deleteSelected}
+                  style={{padding:'4px 10px',background:'#dc2626',color:'#fff',border:'none',borderRadius:5,cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:'inherit'}}>
+                  선택 삭제
+                </button>
+                <button onClick={clearSelect}
+                  style={{padding:'4px 8px',background:'none',border:'1px solid #d1d5db',borderRadius:5,cursor:'pointer',fontSize:11,color:'#6b7280',fontFamily:'inherit'}}>
+                  선택 해제
+                </button>
+              </>
+            )}
+            <button onClick={selected.size===0?selectAll:clearSelect}
+              style={{padding:'4px 10px',background:'#f1f5f9',border:'1px solid #e2e8f0',borderRadius:5,cursor:'pointer',fontSize:11,color:'#374151',fontFamily:'inherit'}}>
+              {selected.size===0?'전체 선택':'전체 해제'}
+            </button>
+          </div>
         </div>
         <div style={S.tableWrap}>
           <table style={S.table}>
             <thead>
               <tr>
+                <th style={{...S.th,width:36,textAlign:'center'}}>
+                  <input type="checkbox"
+                    checked={plans.filter(p=>p.status!=='confirmed').length>0 && plans.filter(p=>p.status!=='confirmed').every(p=>selected.has(p.id))}
+                    onChange={e=>e.target.checked?selectAll():clearSelect()}
+                    style={{cursor:'pointer'}}/>
+                </th>
                 {['출하날짜','SET 수량','재고충족','메모','상태',''].map((h,i)=>(
                   <th key={i} style={{...S.th, textAlign:i===1?'right':'left'}}>{h}</th>
                 ))}
@@ -234,7 +273,13 @@ function ProductShipment({ transactions, stockMap }) {
                 const confirmed = plan.status==='confirmed'
                 const bg = confirmed?'#f0fdf4':i%2===0?'#f8fafc':'#fff'
                 return (
-                  <tr key={plan.id} style={{background:bg}}>
+                  <tr key={plan.id} style={{background:selected.has(plan.id)?'#eff6ff':bg}}>
+                    <td style={{...S.td,textAlign:'center'}}>
+                      {!confirmed && (
+                        <input type="checkbox" checked={selected.has(plan.id)}
+                          onChange={()=>toggleSelect(plan.id)} style={{cursor:'pointer'}}/>
+                      )}
+                    </td>
                     <td style={{...S.td,fontWeight:600}}>
                       {editPlanId===plan.id
                         ? <input type="text" value={editPlan.date} onChange={e=>setEditPlan({...editPlan,date:e.target.value})} style={{...S.tdInp,width:110}}/>
@@ -311,6 +356,19 @@ function PartsOutbound({ transactions }) {
   const memoRef = useRef(null)
 
   const setF = (k,v) => setForm(f=>({...f,[k]:v}))
+  const toggleSelect = (id) => setSelected(s => { const n=new Set(s); n.has(id)?n.delete(id):n.add(id); return n })
+  const selectAll    = () => setSelected(new Set(plans.filter(p=>p.status!=='confirmed').map(p=>p.id)))
+  const clearSelect  = () => setSelected(new Set())
+  const deleteSelected = async () => {
+    if (selected.size===0) return
+    if (!window.confirm(`선택한 ${selected.size}건을 삭제하시겠습니까?`)) return
+    for (const id of selected) {
+      const plan = plans.find(p=>p.id===id)
+      await deleteDoc(doc(db,'transactions',id))
+      if (plan) await writeLog({ action:'삭제', target:'출하계획', docId:id, before:{date:plan.date,setQty:plan.setQty}, user:userData?.name||'' })
+    }
+    setSelected(new Set())
+  }
   const codeUpper = form.itemCode.trim().toUpperCase()
   const foundItem = ITEMS.find(i=>i.code===codeUpper) || ITEMS.find(i=>i.code==='A'+codeUpper)
   const isReady = form.date && foundItem && form.quantity && Number(form.quantity)>0
