@@ -92,7 +92,7 @@ export default function Dashboard({ transactions, stockMap }) {
 
         {/* 테이블 */}
         <div style={{overflowY:'auto',overflowX:'hidden',flex:1}}>
-          <table style={{width:'100%',maxWidth:900,borderCollapse:'collapse',tableLayout:'fixed'}}>
+          <table style={{width:'100%',maxWidth:1100,borderCollapse:'collapse',tableLayout:'fixed'}}>
             <colgroup>
               <col style={{width:90}}/>
               <col/>
@@ -138,7 +138,7 @@ export default function Dashboard({ transactions, stockMap }) {
                     <td style={{...S.td,textAlign:'center'}}>
                       <span style={{background:'#eff6ff',color:'#1e40af',padding:'1px 7px',borderRadius:4,fontSize:11,fontWeight:800}}>{item.code}</span>
                     </td>
-                    <td style={{...S.td,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:190}}>{item.name}</td>
+                    <td style={{...S.td,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{item.name}</td>
                     <td style={{...S.td,textAlign:'center',color:'#94a3b8'}}>{item.needPerSet}</td>
                     <td style={{...S.td,textAlign:'right',fontWeight:700}}>{item.stock.toLocaleString()}</td>
                     {sim > 0 ? (

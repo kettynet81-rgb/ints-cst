@@ -8,6 +8,7 @@ import InboundManage from './pages/InboundManage'
 import ShipmentManage from './pages/ShipmentManage'
 import History from './pages/History'
 import AdminPage from './pages/AdminPage'
+import RecallManage from './pages/RecallManage'
 import ShipmentCalendar from './pages/ShipmentCalendar'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
@@ -55,6 +56,7 @@ function MainApp() {
     { id:'inbound',   icon:'↑', label:'입고 관리',  group:'재고관리' },
     { id:'shipment',  icon:'↓', label:'출하 관리',  group:'재고관리' },
     { id:'history',   icon:'≡', label:'이력 조회',  group:'재고관리' },
+    { id:'recall',    icon:'🔧', label:'리콜 수리',   group:'재고관리' },
     { id:'shipcal',   icon:'📅', label:'출하계획 관리', group:'재고관리' },
     ...(userRole==='admin' ? [{ id:'admin', icon:'◉', label:'사용자 관리', group:'시스템' }] : []),
   ]
@@ -152,6 +154,7 @@ function MainApp() {
             : page==='inbound'   ? <InboundManage transactions={transactions} />
             : page==='shipment'  ? <ShipmentManage transactions={transactions} stockMap={stockMap} />
             : page==='history'   ? <History transactions={transactions} />
+            : page==='recall'    ? <RecallManage />
             : page==='shipcal'   ? <ShipmentCalendar transactions={transactions} stockMap={stockMap} onNavigate={setPage}/>
             : page==='admin'     ? <AdminPage />
             : null}
