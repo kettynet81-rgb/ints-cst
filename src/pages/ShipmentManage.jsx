@@ -19,7 +19,7 @@ const parseDate = (v) => {
 }
 const today = () => new Date().toISOString().slice(0,10)
 
-export default function ShipmentManage({ transactions, stockMap }) {
+export default function ShipmentManage({ transactions, stockMap, onNavigate }) {
   const [tab, setTab] = useState('product') // 'product' | 'parts'
 
   return (
@@ -44,7 +44,7 @@ export default function ShipmentManage({ transactions, stockMap }) {
 /* ────────────────────────────────────────────
    제품 출하 탭
 ──────────────────────────────────────────── */
-function ProductShipment({ transactions, stockMap }) {
+function ProductShipment({ transactions, stockMap, onNavigate }) {
   const { userData } = useAuth()
   const plans = transactions
     .filter(t => t.type === '출하계획' && t.isHeader)
@@ -228,6 +228,7 @@ function ProductShipment({ transactions, stockMap }) {
       <div style={S.card}>
         <div style={S.cardHead}>
           <span style={S.cardTitle}>출하 계획 목록</span>
+            <span style={{fontSize:11,color:'#94a3b8',marginLeft:4}}>출하계획 관리와 동기화됨</span>
           <div style={{display:'flex',alignItems:'center',gap:8}}>
             <span style={S.cardSub}>총 {plans.length}건 · 확정 시 재고 자동 차감</span>
             {selected.size > 0 && (
