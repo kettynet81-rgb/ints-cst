@@ -5,7 +5,8 @@ import { useAuth } from '../contexts/AuthContext'
 import { writeLog } from '../utils/logger'
 import * as XLSX from 'xlsx'
 
-const REPAIR_ITEMS = ['견시창 교체','반사판 교체','내부 볼트 파손','외부 볼트 파손','기타']
+const REPAIR_ITEMS = ['견시창 교체','반사판 교체','내부 볼트 파손','외부 볼트 파손','RFID 교체','파손','기타']
+const MEMO_PRESETS = ['RFID 구형','RFID 신형','구형TYPE','신형TYPE']
 const EMPTY_FORM = { rfid:'', rfidList:'', repairItems:[], payType:'유상', round:'', outDate:'', inDate:'', memo:'' }
 
 const parseDate = (v) => {
@@ -246,8 +247,21 @@ export default function RecallManage() {
           </div>
           <div style={{...S.field,flex:1}}>
             <label style={S.label}>비고</label>
+            <div style={{display:'flex',gap:4,marginBottom:4,flexWrap:'wrap'}}>
+              {MEMO_PRESETS.map(p=>(
+                <button key={p} type="button"
+                  onClick={()=>setF('memo', form.memo===p?'':p)}
+                  style={{padding:'3px 8px',border:'1px solid',borderRadius:4,cursor:'pointer',
+                    fontSize:10,fontFamily:'inherit',fontWeight:600,
+                    background:form.memo===p?'#1e293b':'#f3f4f6',
+                    color:form.memo===p?'#fff':'#374151',
+                    borderColor:form.memo===p?'#1e293b':'#d1d5db'}}>
+                  {p}
+                </button>
+              ))}
+            </div>
             <input value={form.memo} onChange={e=>setF('memo',e.target.value)}
-              placeholder="RFID 구형, 신형TYPE 등" style={{...S.inp}} onKeyDown={e=>e.key==='Enter'&&save()}/>
+              placeholder="직접 입력 가능" style={{...S.inp}} onKeyDown={e=>e.key==='Enter'&&save()}/>
           </div>
           <div style={{display:'flex',gap:6,alignItems:'flex-end',paddingBottom:1}}>
             {!editId && (
