@@ -128,7 +128,6 @@ function MainApp() {
         </div>
       </aside>
       )}
-
       <div style={S.mainWrap}>
         <header style={S.header}>
           <div style={{fontSize:13,color:'#64748b'}}>
