@@ -109,10 +109,11 @@ export default function InboundManage({ transactions }) {
 
           {/* 품목코드 */}
           <div style={{...S.field, flex:1}}>
-            <label style={S.label}>
-              품목코드
-              {item && <span style={{color:'#16a34a', fontWeight:700, fontSize:11, marginLeft:6}}>→ {item.name}</span>}
-              {form.itemCode && !item && <span style={{color:'#dc2626', fontSize:11, marginLeft:6}}>→ 없는 코드</span>}
+            <label style={{...S.label, display:'flex', alignItems:'center', gap:8}}>
+              <span>품목코드</span>
+              <ItemLookup onSelect={code=>{setF('itemCode',code); setTimeout(()=>qtyRef.current?.focus(),50)}}/>
+              {item && <span style={{color:'#16a34a', fontWeight:700, fontSize:11}}>→ {item.name}</span>}
+              {form.itemCode && !item && <span style={{color:'#dc2626', fontSize:11}}>→ 없는 코드</span>}
             </label>
             <div style={{position:'relative'}}>
               <input ref={codeRef} type="text" value={form.itemCode}
