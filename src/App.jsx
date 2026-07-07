@@ -21,6 +21,7 @@ function MainApp() {
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
   const [sideCollapsed, setSideCollapsed] = useState(false)
+  const isMobile = window.innerWidth < 768
   const [pendingCount, setPendingCount] = useState(0)
   const [toast, setToast] = useState(null)
   const [showPrint, setShowPrint] = useState(false)
@@ -68,7 +69,7 @@ function MainApp() {
 
   return (
     <div style={S.root}>
-      <aside style={{...S.sidebar, width: sideCollapsed ? 60 : 220}}>
+      {!isMobile && <aside style={{...S.sidebar, width: sideCollapsed ? 60 : 220}}>
         <div style={{...S.logoArea, justifyContent: sideCollapsed?'center':'flex-start'}}>
           <button style={{...S.logoBtn, display: sideCollapsed?'none':'flex'}} onClick={()=>setPage('dashboard')} title="홈으로">
             <img src="/ints-logo.png" alt="INTS"
@@ -163,6 +164,28 @@ function MainApp() {
 
       {toast && <div style={S.toast}>✓ {toast}</div>}
       {showPrint && <PrintModal transactions={transactions} stockMap={stockMap} onClose={()=>setShowPrint(false)} />}
+
+      {/* 모바일 하단 탭바 */}
+      {isMobile && (
+        <div style={{position:'fixed',bottom:0,left:0,right:0,background:'#0f172a',
+          borderTop:'1px solid #1e293b',display:'flex',zIndex:100,paddingBottom:'env(safe-area-inset-bottom)'}}>
+          {[
+            { id:'dashboard', icon:'◈', label:'재고' },
+            { id:'inbound',   icon:'↑', label:'입고' },
+            { id:'shipment',  icon:'↓', label:'출하' },
+            { id:'history',   icon:'≡', label:'이력' },
+            { id:'shipcal',   icon:'📅', label:'계획' },
+          ].map(item => (
+            <button key={item.id} onClick={()=>setPage(item.id)}
+              style={{flex:1,padding:'8px 2px',background:'none',border:'none',cursor:'pointer',
+                display:'flex',flexDirection:'column',alignItems:'center',gap:2,
+                color:page===item.id?'#3b82f6':'#64748b',fontFamily:'inherit'}}>
+              <span style={{fontSize:18}}>{item.icon}</span>
+              <span style={{fontSize:10,fontWeight:page===item.id?700:400}}>{item.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -192,6 +215,6 @@ const S = {
   avatar:   {width:26,height:26,borderRadius:'50%',background:'#1e40af',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,color:'#fff',flexShrink:0},
   mainWrap: {flex:1,display:'flex',flexDirection:'column',overflow:'hidden'},
   header:   {height:50,background:'#fff',borderBottom:'1px solid #e2e8f0',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 24px',flexShrink:0,boxShadow:'0 1px 3px rgba(0,0,0,0.04)'},
-  content:  {flex:1,overflowY:'auto',padding:'12px 16px'},
+  content:  {flex:1,overflowY:'auto',padding:'12px 16px',paddingBottom: window.innerWidth<768?80:12},
   toast:    {position:'fixed',bottom:24,right:24,background:'#0f172a',color:'#fff',padding:'12px 20px',borderRadius:8,fontSize:14,fontWeight:600,boxShadow:'0 8px 24px rgba(0,0,0,0.2)',zIndex:2000},
 }
