@@ -21,7 +21,12 @@ function MainApp() {
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
   const [sideCollapsed, setSideCollapsed] = useState(false)
-  const isMobile = window.innerWidth < 768
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
   const [pendingCount, setPendingCount] = useState(0)
   const [toast, setToast] = useState(null)
   const [showPrint, setShowPrint] = useState(false)
@@ -215,6 +220,6 @@ const S = {
   avatar:   {width:26,height:26,borderRadius:'50%',background:'#1e40af',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,color:'#fff',flexShrink:0},
   mainWrap: {flex:1,display:'flex',flexDirection:'column',overflow:'hidden'},
   header:   {height:50,background:'#fff',borderBottom:'1px solid #e2e8f0',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 24px',flexShrink:0,boxShadow:'0 1px 3px rgba(0,0,0,0.04)'},
-  content:  {flex:1,overflowY:'auto',padding:'12px 16px',paddingBottom: window.innerWidth<768?80:12},
+  content:  {flex:1,overflowY:'auto',padding:'12px 16px'},
   toast:    {position:'fixed',bottom:24,right:24,background:'#0f172a',color:'#fff',padding:'12px 20px',borderRadius:8,fontSize:14,fontWeight:600,boxShadow:'0 8px 24px rgba(0,0,0,0.2)',zIndex:2000},
 }
