@@ -156,7 +156,7 @@ function MainApp() {
               <div style={{width:28,height:28,border:'3px solid #e2e8f0',borderTop:'3px solid #3b82f6',borderRadius:'50%'}}/>
               <div style={{color:'#64748b',fontSize:13}}>데이터 불러오는 중...</div>
             </div>
-          ) : page==='dashboard' ? <Dashboard transactions={transactions} stockMap={stockMap} />
+          ) : page==='dashboard' ? <Dashboard transactions={transactions} stockMap={stockMap} isMobile={isMobile}/>
             : page==='inbound'   ? <InboundManage transactions={transactions} />
             : page==='shipment'  ? <ShipmentManage transactions={transactions} stockMap={stockMap} onNavigate={setPage}/>
             : page==='history'   ? <History transactions={transactions} />

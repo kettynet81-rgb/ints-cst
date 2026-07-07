@@ -2,7 +2,7 @@ import { downloadStockExcel } from '../utils/excel'
 import { useState, useMemo } from 'react'
 import { ITEMS } from '../data/items'
 
-export default function Dashboard({ transactions, stockMap }) {
+export default function Dashboard({ transactions, stockMap, isMobile }) {
   const [simQty,  setSimQty]  = useState('')
   const [alarmQty, setAlarmQty] = useState('20')
   const [hoverRow, setHoverRow] = useState(null)
@@ -194,6 +194,8 @@ export default function Dashboard({ transactions, stockMap }) {
               </tfoot>
             )}
           </table>
+            </>
+          )}
         </div>
       </div>
     </div>
