@@ -129,25 +129,24 @@ function MainApp() {
       </aside>
       )}
       <div style={S.mainWrap}>
-        <header style={S.header}>
-          <div style={{fontSize:13,color:'#64748b'}}>
-            <span>CST 재고관리</span>
-            <span style={{margin:'0 6px',color:'#cbd5e1'}}>/</span>
+        <header style={{...S.header, padding: isMobile?'8px 12px':'8px 16px'}}>
+          <div style={{fontSize: isMobile?12:13, color:'#64748b', display:'flex', alignItems:'center', gap:4}}>
+            {!isMobile && <><span>CST 재고관리</span><span style={{margin:'0 4px',color:'#cbd5e1'}}>/</span></>}
             <span style={{color:'#1e293b',fontWeight:600}}>{pageLabel}</span>
           </div>
-          <div style={{display:'flex',alignItems:'center',gap:12}}>
-            <span style={{fontSize:12,color:'#64748b'}}>{dateStr}</span>
-            <div style={{width:1,height:16,background:'#e2e8f0'}}/>
-            <button onClick={()=>setShowPrint(true)}
+          <div style={{display:'flex',alignItems:'center',gap: isMobile?6:12}}>
+            {!isMobile && <span style={{fontSize:12,color:'#64748b'}}>{dateStr}</span>}
+            {!isMobile && <div style={{width:1,height:16,background:'#e2e8f0'}}/>}
+            {!isMobile && <button onClick={()=>setShowPrint(true)}
               style={{background:'none',border:'1px solid #e2e8f0',borderRadius:6,padding:'4px 10px',cursor:'pointer',fontSize:12,color:'#64748b',display:'flex',alignItems:'center',gap:4}}>
               🖨 인쇄
-            </button>
+            </button>}
             <button onClick={()=>window.location.reload()}
-              style={{background:'none',border:'1px solid #e2e8f0',borderRadius:6,padding:'4px 10px',cursor:'pointer',fontSize:12,color:'#64748b',display:'flex',alignItems:'center',gap:4}}>
-              ↻ 새로고침
+              style={{background:'none',border:'1px solid #e2e8f0',borderRadius:6,padding:'4px 8px',cursor:'pointer',fontSize:12,color:'#64748b'}}>
+              ↻
             </button>
             <div style={{width:1,height:16,background:'#e2e8f0'}}/>
-            <span style={{fontSize:13,fontWeight:600,color:'#374151'}}>{userData?.name} 님</span>
+            <span style={{fontSize: isMobile?12:13, fontWeight:600,color:'#374151'}}>{userData?.name}{isMobile?'':' 님'}</span>
           </div>
         </header>
 
