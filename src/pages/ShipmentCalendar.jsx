@@ -253,13 +253,13 @@ export default function ShipmentCalendar({ transactions, stockMap = {} }) {
         const isSun = wi===0, isSat = wi===6
         const color = hw||isSun ? '#ef4444' : isSat ? '#2563eb' : '#111'
         const totalQty = plans.reduce((s,p)=>s+(p.setQty||0),0)
-        return `<td style="border:1px solid #e5e7eb;padding:4px;vertical-align:top;min-height:100px;">
-          <div style="font-size:12px;font-weight:700;color:${color};margin-bottom:2px;">
+        return `<td style="border:1px solid #e5e7eb;padding:3px;vertical-align:top;min-height:70px;">
+          <div style="font-size:11px;font-weight:700;color:${color};margin-bottom:1px;">
             ${d}${hw?` <span style="font-size:9px;font-weight:400">(${hw})</span>`:''}
           </div>
-          ${totalQty>0?`<div style="background:#1e40af;color:#fff;font-size:10px;font-weight:700;text-align:center;padding:2px;border-radius:3px;margin-bottom:3px;">${totalQty.toLocaleString()} EA</div>`:''}
+          ${totalQty>0?`<div style="background:#1e40af;color:#fff;font-size:9px;font-weight:700;text-align:center;padding:1px;border-radius:2px;margin-bottom:2px;">${totalQty.toLocaleString()} EA</div>`:''}
           ${plans.map(p=>`
-            <div style="font-size:9px;line-height:1.5;padding:2px 3px;margin-bottom:2px;border-radius:2px;
+            <div style="font-size:8px;line-height:1.4;padding:1px 3px;margin-bottom:1px;border-radius:2px;
               background:${p.status==='confirmed'?'#f0fdf4':'#eff6ff'};
               border-left:2px solid ${p.timeSlot==='오전'?'#1e40af':'#7c3aed'}">
               <span style="color:${p.timeSlot==='오전'?'#1e40af':'#7c3aed'};font-weight:700">${p.timeSlot}</span>
@@ -275,12 +275,17 @@ export default function ShipmentCalendar({ transactions, stockMap = {} }) {
       <title>출하계획 ${monthStr}</title>
       <style>
         * { box-sizing:border-box; margin:0; padding:0; }
-        body { font-family: 'Malgun Gothic',sans-serif; padding:16px; color:#111; }
-        h2 { text-align:center; font-size:16px; margin-bottom:4px; }
-        .sub { text-align:center; font-size:11px; color:#666; margin-bottom:12px; }
+        body { font-family: 'Malgun Gothic',sans-serif; padding:6px; color:#111; }
+        h2 { text-align:center; font-size:14px; margin-bottom:2px; }
+        .sub { text-align:center; font-size:10px; color:#666; margin-bottom:6px; }
         table { width:100%; border-collapse:collapse; table-layout:fixed; }
-        th { background:#1e293b; color:#fff; padding:6px; font-size:11px; text-align:center; }
-        @media print { @page { margin:10mm; size:A4 landscape; } body { padding:0; } }
+        th { background:#1e293b; color:#fff; padding:4px; font-size:10px; text-align:center; }
+        td { vertical-align:top; }
+        @media print {
+          @page { margin:5mm; size:A4 landscape; }
+          body { padding:0; }
+          html, body { height:100%; overflow:hidden; }
+        }
       </style>
     </head><body>
       <h2>㈜아이엔티에스 · ${monthStr} 출하계획</h2>
