@@ -430,10 +430,11 @@ function PartsOutbound({ transactions }) {
               style={{...S.inp,width:130}} />
           </div>
           <div style={{...S.field,flex:2}}>
-            <label style={S.label}>
-              품목코드
-              {foundItem && <span style={{color:'#16a34a',fontWeight:700,fontSize:11,marginLeft:6}}>→ {foundItem.name}</span>}
-              {form.itemCode && !foundItem && <span style={{color:'#dc2626',fontSize:11,marginLeft:6}}>→ 없는 코드</span>}
+            <label style={{...S.label, display:'flex', alignItems:'center', gap:8}}>
+              <span>품목코드</span>
+              <ItemLookup onSelect={code=>{finalizeCode(code,true)}}/>
+              {foundItem && <span style={{color:'#16a34a',fontWeight:700,fontSize:11}}>→ {foundItem.name}</span>}
+              {form.itemCode && !foundItem && <span style={{color:'#dc2626',fontSize:11}}>→ 없는 코드</span>}
             </label>
             <input ref={codeRef} type="text" value={form.itemCode}
               onChange={e=>setF('itemCode',e.target.value.toUpperCase())}
