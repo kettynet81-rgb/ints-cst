@@ -90,7 +90,32 @@ export default function Dashboard({ transactions, stockMap, isMobile }) {
           </div>
         </div>
 
-        {/* 테이블 */}
+        {/* 모바일 카드 / PC 테이블 */}
+        {isMobile ? (
+          <div style={{overflowY:'auto',flex:1,padding:'8px 10px',display:'flex',flexDirection:'column',gap:6}}>
+            {itemStats.map(item => (
+              <div key={item.code} style={{
+                display:'flex',alignItems:'center',gap:10,padding:'10px 12px',borderRadius:8,
+                background:item.status==='empty'?'#fff5f5':item.status==='low'?'#fffbeb':'#fff',
+                border:`1px solid ${item.status==='empty'?'#fca5a5':item.status==='low'?'#fde68a':'#e5e7eb'}`
+              }}>
+                <div style={{width:46,flexShrink:0}}>
+                  <div style={{fontWeight:700,color:'#1e40af',fontSize:13}}>{item.code}</div>
+                  <div style={{fontSize:9,color:'#9ca3af'}}>×{item.needPerSet}</div>
+                </div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:12,color:'#374151',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{item.name}</div>
+                </div>
+                <div style={{textAlign:'right',flexShrink:0}}>
+                  <div style={{fontWeight:700,fontSize:16,color:item.status==='empty'?'#dc2626':'#111827'}}>{item.stock.toLocaleString()}</div>
+                  <div style={{fontSize:10,fontWeight:600,color:item.status==='empty'?'#dc2626':item.status==='low'?'#d97706':'#16a34a'}}>
+                    {item.status==='empty'?'재고없음':item.status==='low'?'발주필요':'정상'}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
         <div style={{overflowY:'auto',overflowX:'hidden',flex:1}}>
           <table style={{width:'100%',maxWidth:1100,borderCollapse:'collapse',tableLayout:'fixed'}}>
             <colgroup>
