@@ -74,7 +74,8 @@ function MainApp() {
 
   return (
     <div style={S.root}>
-      {!isMobile && <aside style={{...S.sidebar, width: sideCollapsed ? 60 : 220}}>
+      {!isMobile && (
+      <aside style={{...S.sidebar, width: sideCollapsed ? 60 : 220}}>
         <div style={{...S.logoArea, justifyContent: sideCollapsed?'center':'flex-start'}}>
           <button style={{...S.logoBtn, display: sideCollapsed?'none':'flex'}} onClick={()=>setPage('dashboard')} title="홈으로">
             <img src="/ints-logo.png" alt="INTS"
@@ -126,6 +127,7 @@ function MainApp() {
           )}
         </div>
       </aside>
+      )}
 
       <div style={S.mainWrap}>
         <header style={S.header}>
