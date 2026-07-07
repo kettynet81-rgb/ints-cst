@@ -369,6 +369,7 @@ function PartsOutbound({ transactions }) {
   const qtyRef  = useRef(null)
   const memoRef = useRef(null)
 
+  const setF = (k,v) => setForm(f=>({...f,[k]:v}))
   const codeUpper = form.itemCode.trim().toUpperCase()
   const foundItem = ITEMS.find(i=>i.code===codeUpper) || ITEMS.find(i=>i.code==='A'+codeUpper)
   const isReady = form.date && foundItem && form.quantity && Number(form.quantity)>0
