@@ -116,7 +116,7 @@ export default function Dashboard({ transactions, stockMap, isMobile }) {
             ))}
           </div>
         ) : (
-        <div style={{overflowY:'auto',overflowX:'hidden',flex:1}}>
+          <div style={{overflowY:'auto',overflowX:'hidden',flex:1}}>
           <table style={{width:'100%',maxWidth:1100,borderCollapse:'collapse',tableLayout:'fixed'}}>
             <colgroup>
               <col style={{width:90}}/>
@@ -219,7 +219,7 @@ export default function Dashboard({ transactions, stockMap, isMobile }) {
               </tfoot>
             )}
           </table>
-        </div>
+          </div>
         )}
       </div>
     </div>
