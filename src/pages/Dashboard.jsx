@@ -219,9 +219,8 @@ export default function Dashboard({ transactions, stockMap, isMobile }) {
               </tfoot>
             )}
           </table>
-            </>
-          )}
         </div>
+        )}
       </div>
     </div>
   )
