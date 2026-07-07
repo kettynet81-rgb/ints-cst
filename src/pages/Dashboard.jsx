@@ -46,8 +46,8 @@ export default function Dashboard({ transactions, stockMap, isMobile }) {
       {/* 테이블 카드 */}
       <div style={{background:'#fff',borderRadius:8,border:'1px solid #e2e8f0',display:'flex',flexDirection:'column',flex:1,minHeight:0,overflow:'hidden'}}>
 
-        {/* 카드 헤더 */}
-        <div style={{padding:'10px 16px',borderBottom:'1px solid #f1f5f9',display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0}}>
+        {/* 카드 헤더 - PC만 표시 */}
+        {!isMobile && <div style={{padding:'10px 16px',borderBottom:'1px solid #f1f5f9',display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0}}>
           <div>
             <div style={{fontSize:13,fontWeight:700,color:'#0f172a'}}>부품 재고 현황</div>
             <div style={{fontSize:11,color:'#94a3b8',marginTop:1}}>C-CST 원부자재 A1 ~ A29</div>
