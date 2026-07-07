@@ -4,6 +4,7 @@ import { writeLog } from '../utils/logger'
 import { db } from '../firebase'
 import { useAuth } from '../contexts/AuthContext'
 import { ITEMS } from '../data/items'
+import ItemLookup from '../components/ItemLookup'
 
 const ITEM_MAP = Object.fromEntries(ITEMS.map(i => [i.code, i.name]))
 const today    = () => new Date().toISOString().slice(0,10)

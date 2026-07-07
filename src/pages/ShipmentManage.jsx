@@ -4,6 +4,7 @@ import { collection, addDoc, deleteDoc, doc, updateDoc, writeBatch, serverTimest
 import { writeLog } from '../utils/logger'
 import { db } from '../firebase'
 import { ITEMS } from '../data/items'
+import ItemLookup from '../components/ItemLookup'
 
 const ITEM_MAP = Object.fromEntries(ITEMS.map(i => [i.code, i.name]))
 
