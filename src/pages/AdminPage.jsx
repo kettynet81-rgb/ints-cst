@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { db } from "../firebase"
-import { collection, onSnapshot, doc, updateDoc, getDocs, writeBatch, query, where } from "firebase/firestore"
+import { collection, onSnapshot, doc, updateDoc, getDocs, writeBatch, query, where, addDoc, deleteDoc, orderBy, serverTimestamp } from "firebase/firestore"
 import { useAuth } from "../contexts/AuthContext"
 
 const ROLE_LABEL = { pending:"대기", approved:"승인", admin:"관리자", rejected:"거절", blocked:"차단" }
@@ -44,6 +44,24 @@ export default function AdminPage() {
     if (ops > 0) await batch.commit()
 
     alert(`완료\n출고기록 ${shipmentOuts.length}건 삭제\n출하계획 ${planSnap.docs.length}건 복구`)
+  }
+
+
+  // ── 공휴일 관리
+  const [holidays, setHolidays] = useState([])
+  const [hForm, setHForm] = useState({ date:'', name:'' })
+  useEffect(() => {
+    const q = query(collection(db,'holidays'), orderBy('date'))
+    return onSnapshot(q, snap => setHolidays(snap.docs.map(d=>({id:d.id,...d.data()}))))
+  }, [])
+  const addHoliday = async () => {
+    if (!hForm.date||!hForm.name.trim()) return
+    await addDoc(collection(db,'holidays'), { date:hForm.date, name:hForm.name.trim(), createdAt:serverTimestamp() })
+    setHForm({ date:'', name:'' })
+  }
+  const deleteHoliday = async (id) => {
+    if (!window.confirm('삭제하시겠습니까?')) return
+    await deleteDoc(doc(db,'holidays',id))
   }
 
   const runMigration = async () => {
@@ -101,6 +119,24 @@ export default function AdminPage() {
     alert(`완료\n출고기록 ${shipmentOuts.length}건 삭제\n출하계획 ${planSnap.docs.length}건 복구`)
   }
 
+
+  // ── 공휴일 관리
+  const [holidays, setHolidays] = useState([])
+  const [hForm, setHForm] = useState({ date:'', name:'' })
+  useEffect(() => {
+    const q = query(collection(db,'holidays'), orderBy('date'))
+    return onSnapshot(q, snap => setHolidays(snap.docs.map(d=>({id:d.id,...d.data()}))))
+  }, [])
+  const addHoliday = async () => {
+    if (!hForm.date||!hForm.name.trim()) return
+    await addDoc(collection(db,'holidays'), { date:hForm.date, name:hForm.name.trim(), createdAt:serverTimestamp() })
+    setHForm({ date:'', name:'' })
+  }
+  const deleteHoliday = async (id) => {
+    if (!window.confirm('삭제하시겠습니까?')) return
+    await deleteDoc(doc(db,'holidays',id))
+  }
+
   const runMigration = async () => {
     if (!window.confirm('A1→A1-1, A8→A8-1, A14→A14-1\n기존 데이터를 일괄 변경합니다. 계속하시겠습니까?')) return
     const MAP = { 'A1': 'A1-1', 'A8': 'A8-1', 'A14': 'A14-1' }
@@ -138,6 +174,44 @@ export default function AdminPage() {
           변경 실행
         </button>
       </div>
+
+      {/* 공휴일 관리 */}
+      <div style={{marginBottom:16,background:'#fff',border:'1px solid #e5e7eb',borderRadius:8,overflow:'hidden'}}>
+        <div style={{padding:'12px 16px',background:'#f8fafc',borderBottom:'1px solid #e5e7eb',fontWeight:700,fontSize:14,color:'#111827'}}>
+          📅 공휴일 관리
+        </div>
+        <div style={{padding:'12px 16px'}}>
+          <div style={{display:'flex',gap:8,marginBottom:12}}>
+            <input type="date" value={hForm.date} onChange={e=>setHForm(f=>({...f,date:e.target.value}))}
+              style={{padding:'7px 9px',border:'1px solid #d1d5db',borderRadius:6,fontSize:12,fontFamily:'inherit'}}/>
+            <input type="text" value={hForm.name} onChange={e=>setHForm(f=>({...f,name:e.target.value}))}
+              placeholder="공휴일명 (예: 광복절 대체휴무)" style={{flex:1,padding:'7px 9px',border:'1px solid #d1d5db',borderRadius:6,fontSize:12,fontFamily:'inherit',outline:'none'}}
+              onKeyDown={e=>e.key==='Enter'&&addHoliday()}/>
+            <button onClick={addHoliday} disabled={!hForm.date||!hForm.name}
+              style={{padding:'7px 14px',background:'#1e40af',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:'inherit',opacity:!hForm.date||!hForm.name?0.5:1}}>
+              추가
+            </button>
+          </div>
+          <div style={{maxHeight:260,overflowY:'auto'}}>
+            {holidays.length===0 && <div style={{color:'#9ca3af',fontSize:12,textAlign:'center',padding:16}}>등록된 공휴일이 없습니다</div>}
+            {holidays.map(h => (
+              <div key={h.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',
+                padding:'6px 10px',borderRadius:5,marginBottom:3,background:'#f8fafc'}}>
+                <div>
+                  <span style={{fontWeight:700,color:'#1e40af',fontSize:13,marginRight:8}}>{h.date}</span>
+                  <span style={{fontSize:12,color:'#374151'}}>{h.name}</span>
+                  {h.date?.slice(5,7)==='08'&&h.date?.slice(8,10)==='17'&&<span style={{marginLeft:6,fontSize:10,color:'#16a34a'}}>✓</span>}
+                </div>
+                <button onClick={()=>deleteHoliday(h.id)}
+                  style={{padding:'3px 8px',background:'#fee2e2',border:'1px solid #fca5a5',borderRadius:4,cursor:'pointer',fontSize:11,color:'#dc2626',fontFamily:'inherit'}}>
+                  삭제
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       <div style={{marginBottom:24}}>
         <div style={{fontSize:22,fontWeight:700,color:"#0f172a"}}>사용자 관리</div>
         <div style={{fontSize:13,color:"#64748b",marginTop:3}}>

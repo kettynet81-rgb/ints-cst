@@ -1,5 +1,5 @@
-import { useState, useMemo, useRef } from 'react'
-import { collection, addDoc, deleteDoc, doc, updateDoc, writeBatch, serverTimestamp } from 'firebase/firestore'
+import { useState, useMemo, useRef, useEffect } from 'react'
+import { collection, addDoc, deleteDoc, doc, updateDoc, writeBatch, serverTimestamp, onSnapshot, query, orderBy } from 'firebase/firestore'
 import { ITEMS } from '../data/items'
 import { db } from '../firebase'
 import { useAuth } from '../contexts/AuthContext'
@@ -36,6 +36,17 @@ const EMPTY_FORM = { qty:'', serial:'', orderNo:'', timeSlot:'오전', memo:'', 
 
 export default function ShipmentCalendar({ transactions, stockMap = {} }) {
   const { userData } = useAuth()
+  const [dbHolidays, setDbHolidays] = useState({})
+  useEffect(() => {
+    const q = query(collection(db,'holidays'), orderBy('date'))
+    return onSnapshot(q, snap => {
+      const m = {}
+      snap.docs.forEach(d => { m[d.data().date] = d.data().name })
+      setDbHolidays(m)
+    })
+  }, [])
+  // 하드코딩 + DB 공휴일 병합
+  const ALL_HOLIDAYS = useMemo(() => ({...HOLIDAYS, ...dbHolidays}), [dbHolidays])
   const today = new Date()
   const [year,  setYear]  = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth())
@@ -238,7 +249,7 @@ export default function ShipmentCalendar({ transactions, stockMap = {} }) {
         if (!d) return `<td style="border:1px solid #e5e7eb;height:100px;background:#f9fafb;"></td>`
         const date = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
         const plans = planMap[date] || []
-        const hw = HOLIDAYS[date]
+        const hw = ALL_HOLIDAYS[date]
         const isSun = wi===0, isSat = wi===6
         const color = hw||isSun ? '#ef4444' : isSat ? '#2563eb' : '#111'
         const totalQty = plans.reduce((s,p)=>s+(p.setQty||0),0)
@@ -474,7 +485,7 @@ export default function ShipmentCalendar({ transactions, stockMap = {} }) {
           {cells.map((d,i) => {
             if(!d) return <div key={i} style={S.emptyCell}/>
             const date     = ds(d)
-            const hw       = HOLIDAYS[date]
+            const hw       = ALL_HOLIDAYS[date]
             const isSun    = (firstDay+d-1)%7===0
             const isSat    = (firstDay+d-1)%7===6
             const isToday  = date===todayStr
@@ -535,7 +546,7 @@ export default function ShipmentCalendar({ transactions, stockMap = {} }) {
             <div style={S.modalHeader}>
               <div>
                 <div style={{fontSize:16,fontWeight:700,color:'#111827'}}>{modal.date}</div>
-                {HOLIDAYS[modal.date] && <div style={{fontSize:12,color:'#ef4444',marginTop:2}}>{HOLIDAYS[modal.date]}</div>}
+                {ALL_HOLIDAYS[modal.date] && <div style={{fontSize:12,color:'#ef4444',marginTop:2}}>{ALL_HOLIDAYS[modal.date]}</div>}
               </div>
               <button onClick={()=>{setModal(null);setEditId(null);setForm(EMPTY_FORM)}} style={S.closeBtn}>✕</button>
             </div>
