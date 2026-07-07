@@ -88,7 +88,7 @@ export default function Dashboard({ transactions, stockMap, isMobile }) {
               ? <><Dot color="#dc2626" label="부족"/><Dot color="#16a34a" label="충족"/></>
               : <><Dot color="#dc2626" label="재고없음"/><Dot color="#d97706" label="발주필요"/><Dot color="#16a34a" label="정상"/></>}
           </div>
-        </div>
+        </div>}
 
         {/* 모바일 카드 / PC 테이블 */}
         {isMobile ? (
