@@ -64,7 +64,7 @@ function MainApp() {
     { id:'shipment',  icon:'↓', label:'출하 관리',  group:'조립팀' },
     { id:'shipcal',   icon:'📅', label:'출하계획 관리', group:'조립팀' },
     { id:'history',   icon:'≡', label:'이력 조회',  group:'조립팀' },
-    { id:'recall',    icon:'🔧', label:'리콜 수리',   group:'조립팀' },
+    { id:'recall',    icon:'🔧', label:'리콜 수리',   group:'품질관리' },
     { id:'processing', icon:'🔩', label:'가공 현황',  group:'가공팀' },
     ...(userRole==='admin' ? [{ id:'admin', icon:'◉', label:'사용자 관리', group:'시스템' }] : []),
   ]
