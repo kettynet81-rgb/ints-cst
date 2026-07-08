@@ -8,7 +8,7 @@ import * as XLSX from 'xlsx'
 
 const REPAIR_ITEMS = ['견시창 교체','반사판 교체','내부 볼트 파손','외부 볼트 파손','RFID 교체','파손','기타']
 const MEMO_PRESETS = ['RFID 구형','RFID 신형','구형TYPE','신형TYPE']
-const EMPTY_FORM   = { rfid:'', repairItems:[], payType:'유상', round:'', outDate:'', inDate:'', memo:'' }
+const EMPTY_FORM   = { rfid:'', repairItems:[], payType:'유상', round:'', outDate:'', inDate:'', memo:'', category:'리콜' }
 
 const parseDate = (v) => {
   if (!v) return ''
@@ -34,6 +34,7 @@ export default function RecallManage() {
   const [roundFilter, setRoundFilter] = useState('전체')
   const [search, setSearch]   = useState('')
   const [dateType, setDateType] = useState('반출일')
+  const [catFilter, setCatFilter] = useState('전체')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo,   setDateTo]   = useState('')
   const [loaded,   setLoaded]   = useState(false)
@@ -68,6 +69,7 @@ export default function RecallManage() {
 
   const filtered = useMemo(() => records
     .filter(r => roundFilter==='전체' || r.round===roundFilter)
+    .filter(r => catFilter==='전체' || (r.category||'리콜')===catFilter)
     .filter(r => !search || r.rfid?.toLowerCase().includes(search.toLowerCase()) ||
       (Array.isArray(r.repairItems)?r.repairItems:([r.repairItem||''])).join(' ').includes(search) ||
       r.memo?.includes(search))
@@ -87,7 +89,7 @@ export default function RecallManage() {
 
   const openAdd = () => { setForm(EMPTY_FORM); setEditId(null); setModal(true) }
   const openEdit = (r) => {
-    setForm({ rfid:r.rfid||'', repairItems:Array.isArray(r.repairItems)?r.repairItems:(r.repairItem?[r.repairItem]:[]),
+    setForm({ rfid:r.rfid||'', repairItems:Array.isArray(r.repairItems)?r.repairItems:(r.repairItem?[r.repairItem]:[]), category:r.category||'리콜',
       payType:r.payType||'유상', round:r.round||'', outDate:r.outDate||'', inDate:r.inDate||'', memo:r.memo||'' })
     setEditId(r.id); setModal(true)
   }
@@ -204,6 +206,14 @@ export default function RecallManage() {
       {/* 필터 */}
       <div style={{display:'flex',gap:8,alignItems:'flex-start',flexWrap:'wrap'}}>
         <div style={{display:'flex',gap:5,flexWrap:'wrap',flex:1}}>
+          {['전체','리콜','Repair'].map(cat=>(
+            <button key={cat} onClick={()=>setCatFilter(cat)}
+              style={{padding:'5px 14px',borderRadius:20,border:'1px solid',cursor:'pointer',fontSize:12,fontFamily:'inherit',fontWeight:600,
+                background:catFilter===cat?'#1e293b':'#fff',color:catFilter===cat?'#fff':'#374151',borderColor:catFilter===cat?'#1e293b':'#d1d5db'}}>
+              {cat}
+            </button>
+          ))}
+          <div style={{width:1,background:'#e5e7eb',margin:'0 4px'}}/>
           {rounds.map(r => {
             const info = roundInfo[r]
             const outMin = info?.outDates.sort()[0]?.slice(5)
@@ -264,6 +274,13 @@ export default function RecallManage() {
                   ))}
                 </td>
                 <td style={{...S.td,textAlign:'center'}}>
+                  <span style={{...S.tag,
+                    background:(r.category||'리콜')==='리콜'?'#ede9fe':'#dbeafe',
+                    color:(r.category||'리콜')==='리콜'?'#7c3aed':'#1e40af'}}>
+                    {r.category||'리콜'}
+                  </span>
+                </td>
+                <td style={{...S.td,textAlign:'center'}}>
                   <span style={{...S.tag,background:r.payType==='유상'?'#fee2e2':'#dbeafe',
                     color:r.payType==='유상'?'#dc2626':'#2563eb'}}>{r.payType}</span>
                 </td>
@@ -302,6 +319,20 @@ export default function RecallManage() {
               <button onClick={()=>{setModal(false);setEditId(null)}} style={S.closeBtn}>✕</button>
             </div>
             <div style={S.modalBody}>
+              <div style={S.mField}>
+                <label style={S.label}>카테고리</label>
+                <div style={{display:'flex',gap:6}}>
+                  {['리콜','Repair'].map(cat=>(
+                    <button key={cat} onClick={()=>setForm(f=>({...f,category:cat}))}
+                      style={{flex:1,padding:'7px',border:'1px solid',borderRadius:6,cursor:'pointer',fontFamily:'inherit',fontSize:12,fontWeight:700,
+                        background:form.category===cat?'#1e293b':'#f3f4f6',
+                        color:form.category===cat?'#fff':'#374151',
+                        borderColor:form.category===cat?'#1e293b':'#d1d5db'}}>
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div style={S.mRow}>
                 <div style={S.mField}>
                   <label style={S.label}>차수 *</label>
@@ -336,6 +367,20 @@ export default function RecallManage() {
                         onChange={e=>setF('repairItems',e.target.checked?[...form.repairItems,item]:form.repairItems.filter(x=>x!==item))}/>
                       {item}
                     </label>
+                  ))}
+                </div>
+              </div>
+              <div style={S.mField}>
+                <label style={S.label}>카테고리</label>
+                <div style={{display:'flex',gap:6}}>
+                  {['리콜','Repair'].map(cat=>(
+                    <button key={cat} onClick={()=>setForm(f=>({...f,category:cat}))}
+                      style={{flex:1,padding:'7px',border:'1px solid',borderRadius:6,cursor:'pointer',fontFamily:'inherit',fontSize:12,fontWeight:700,
+                        background:form.category===cat?'#1e293b':'#f3f4f6',
+                        color:form.category===cat?'#fff':'#374151',
+                        borderColor:form.category===cat?'#1e293b':'#d1d5db'}}>
+                      {cat}
+                    </button>
                   ))}
                 </div>
               </div>
