@@ -211,8 +211,8 @@ export default function RecallManage({ defaultCategory }) {
               {cat}
             </button>
           ))}
-          <div style={{width:1,background:'#e5e7eb',margin:'0 4px'}}/>
-          {defaultCategory==='Repair' && rounds.map(r => {
+          {defaultCategory==='Repair' && <><div style={{width:1,background:'#e5e7eb',margin:'0 4px'}}/>
+          {rounds.map(r => {
             const info = roundInfo[r]
             const outMin = info?.outDates.sort()[0]?.slice(5)
             const inMax  = info?.inDates.sort().at(-1)?.slice(5)
@@ -231,7 +231,8 @@ export default function RecallManage({ defaultCategory }) {
                 )}
               </button>
             )
-          })}
+          })}</>
+          }
         </div>
         <div style={{display:'flex',gap:6,alignItems:'center',flexWrap:'wrap'}}>
           {/* 교체항목 필터 */}
