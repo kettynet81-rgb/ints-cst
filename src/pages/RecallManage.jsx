@@ -210,7 +210,7 @@ export default function RecallManage({ defaultCategory }) {
             </button>
           ))}
           <div style={{width:1,background:'#e5e7eb',margin:'0 4px'}}/>
-          {rounds.map(r => {
+          {defaultCategory==='Repair' && rounds.map(r => {
             const info = roundInfo[r]
             const outMin = info?.outDates.sort()[0]?.slice(5)
             const inMax  = info?.inDates.sort().at(-1)?.slice(5)
@@ -247,9 +247,15 @@ export default function RecallManage({ defaultCategory }) {
       <div style={S.tableCard}>
         <table style={{width:'100%',maxWidth:1100,borderCollapse:'collapse',tableLayout:'fixed'}}>
           <colgroup>
-            <col style={{width:45}}/><col style={{width:110}}/><col/>
-            <col style={{width:70}}/><col style={{width:70}}/><col style={{width:105}}/>
-            <col style={{width:110}}/><col style={{width:140}}/><col style={{width:75}}/>
+            {defaultCategory==='Repair' ? <>
+              <col style={{width:45}}/><col style={{width:110}}/><col/>
+              <col style={{width:70}}/><col style={{width:70}}/><col style={{width:105}}/>
+              <col style={{width:110}}/><col style={{width:140}}/><col style={{width:75}}/>
+            </> : <>
+              <col style={{width:45}}/><col style={{width:110}}/><col/>
+              <col style={{width:70}}/><col style={{width:110}}/>
+              <col style={{width:110}}/><col style={{width:160}}/><col style={{width:75}}/>
+            </>}
           </colgroup>
           <thead>
             <tr>{['NO','RFID NO','교체 항목','유·무상','차수','반출일','반입일','비고',''].map((h,i)=>(
@@ -280,7 +286,7 @@ export default function RecallManage({ defaultCategory }) {
                   <span style={{...S.tag,background:r.payType==='유상'?'#fee2e2':'#dbeafe',
                     color:r.payType==='유상'?'#dc2626':'#2563eb'}}>{r.payType}</span>
                 </td>
-                <td style={{...S.td,textAlign:'center',fontSize:12}}>{r.round}</td>
+                {defaultCategory==='Repair' && <td style={{...S.td,textAlign:'center',fontSize:12}}>{r.round}</td>}
                 <td style={{...S.td,textAlign:'center',fontSize:12}}>{r.outDate||'-'}</td>
                 <td style={{...S.td,textAlign:'center'}}>
                   {r.inDate
@@ -317,6 +323,12 @@ export default function RecallManage({ defaultCategory }) {
               <button onClick={()=>{setModal(false);setEditId(null)}} style={S.closeBtn}>✕</button>
             </div>
             <div style={S.modalBody}>
+              {defaultCategory==='Repair' && (
+                <div style={S.mField}>
+                  <label style={S.label}>차수</label>
+                  <input value={form.round} onChange={e=>setForm(f=>({...f,round:e.target.value}))} placeholder="예: 12차" style={S.inp}/>
+                </div>
+              )}
               <div style={S.mField}>
                 <label style={S.label}>카테고리</label>
                 <div style={{display:'flex',gap:6}}>
@@ -368,6 +380,12 @@ export default function RecallManage({ defaultCategory }) {
                   ))}
                 </div>
               </div>
+              {defaultCategory==='Repair' && (
+                <div style={S.mField}>
+                  <label style={S.label}>차수</label>
+                  <input value={form.round} onChange={e=>setForm(f=>({...f,round:e.target.value}))} placeholder="예: 12차" style={S.inp}/>
+                </div>
+              )}
               <div style={S.mField}>
                 <label style={S.label}>카테고리</label>
                 <div style={{display:'flex',gap:6}}>
