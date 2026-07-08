@@ -59,13 +59,13 @@ function MainApp() {
   }, [transactions])
 
   const NAV = [
-    { id:'dashboard', icon:'◈', label:'재고 현황',  group:'재고관리' },
-    { id:'inbound',   icon:'↑', label:'입고 관리',  group:'재고관리' },
-    { id:'shipment',  icon:'↓', label:'출하 관리',  group:'재고관리' },
-    { id:'history',   icon:'≡', label:'이력 조회',  group:'재고관리' },
-    { id:'processing', icon:'🔩', label:'가공 현황',  group:'재고관리' },
-    { id:'recall',    icon:'🔧', label:'리콜 수리',   group:'재고관리' },
-    { id:'shipcal',   icon:'📅', label:'출하계획 관리', group:'재고관리' },
+    { id:'dashboard', icon:'◈', label:'재고 현황',  group:'조립팀' },
+    { id:'inbound',   icon:'↑', label:'입고 관리',  group:'조립팀' },
+    { id:'shipment',  icon:'↓', label:'출하 관리',  group:'조립팀' },
+    { id:'shipcal',   icon:'📅', label:'출하계획 관리', group:'조립팀' },
+    { id:'history',   icon:'≡', label:'이력 조회',  group:'조립팀' },
+    { id:'recall',    icon:'🔧', label:'리콜 수리',   group:'조립팀' },
+    { id:'processing', icon:'🔩', label:'가공 현황',  group:'가공팀' },
     ...(userRole==='admin' ? [{ id:'admin', icon:'◉', label:'사용자 관리', group:'시스템' }] : []),
   ]
 
