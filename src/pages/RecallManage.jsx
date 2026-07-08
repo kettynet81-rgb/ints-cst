@@ -283,13 +283,6 @@ export default function RecallManage({ defaultCategory }) {
                       borderRadius:3,padding:'1px 6px',fontSize:10,marginRight:3,marginBottom:2}}>{item}</span>
                   ))}
                 </td>
-                <td style={{...S.td,textAlign:'center'}}>
-                  <span style={{...S.tag,
-                    background:(r.category||'리콜')==='리콜'?'#ede9fe':'#dbeafe',
-                    color:(r.category||'리콜')==='리콜'?'#7c3aed':'#1e40af'}}>
-                    {r.category||'리콜'}
-                  </span>
-                </td>
                 {defaultCategory==='Repair' && <td style={{...S.td,textAlign:'center'}}>
                   <span style={{...S.tag,background:r.payType==='유상'?'#fee2e2':'#dbeafe',
                     color:r.payType==='유상'?'#dc2626':'#2563eb'}}>{r.payType}</span>
