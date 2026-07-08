@@ -3,6 +3,7 @@ import { db } from "../firebase"
 import { collection, onSnapshot, doc, updateDoc, getDocs, writeBatch,
          query, where, addDoc, deleteDoc, orderBy, serverTimestamp } from "firebase/firestore"
 import { useAuth } from "../contexts/AuthContext"
+import { ITEMS } from "../data/items"
 
 const ROLE_LABEL = { pending:"대기", approved:"승인", admin:"관리자", rejected:"거절", blocked:"차단" }
 
@@ -31,6 +32,24 @@ export default function AdminPage() {
   }
 
   const pendingCount = users.filter(u => u.role === "pending").length
+
+  // 자사가공 품목 설정
+  const [processing, setProcessing] = useState({})
+  useEffect(() => {
+    return onSnapshot(doc(db,'settings','processing'), snap => {
+      if (snap.exists()) setProcessing(snap.data())
+    })
+  }, [])
+  const toggleProcessing = async (code) => {
+    const cur = processing[code] || '외주'
+    const next = cur === '자사' ? '외주' : '자사'
+    await updateDoc(doc(db,'settings','processing'), { [code]: next }).catch(async () => {
+      await addDoc(collection(db,'settings'), {}).catch(()=>{})
+      const { setDoc } = await import('firebase/firestore')
+      await setDoc(doc(db,'settings','processing'), { ...processing, [code]: next })
+    })
+    setProcessing(p => ({...p, [code]: next}))
+  }
 
   // 공휴일 추가/삭제
   const addHoliday = async () => {
@@ -99,6 +118,33 @@ export default function AdminPage() {
           style={{padding:'7px 14px',background:'#d97706',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:'inherit',whiteSpace:'nowrap'}}>
           변경 실행
         </button>
+      </div>
+
+
+      {/* 자사/외주 가공 설정 */}
+      <div style={{marginBottom:16,background:'#fff',border:'1px solid #e5e7eb',borderRadius:8,overflow:'hidden'}}>
+        <div style={{padding:'12px 16px',background:'#f8fafc',borderBottom:'1px solid #e5e7eb',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+          <div style={{fontWeight:700,fontSize:14,color:'#111827'}}>⚙️ 자사/외주 가공 설정</div>
+          <div style={{fontSize:11,color:'#6b7280'}}>클릭하여 전환</div>
+        </div>
+        <div style={{padding:'12px 16px',display:'flex',flexWrap:'wrap',gap:6}}>
+          {ITEMS.map(item => {
+            const type = processing[item.code] || '외주'
+            return (
+              <button key={item.code} onClick={()=>toggleProcessing(item.code)}
+                style={{padding:'5px 10px',borderRadius:6,border:'1px solid',cursor:'pointer',
+                  fontFamily:'inherit',fontSize:11,fontWeight:700,transition:'all 0.15s',
+                  background: type==='자사'?'#1e40af':'#f3f4f6',
+                  color: type==='자사'?'#fff':'#6b7280',
+                  borderColor: type==='자사'?'#1e40af':'#d1d5db'}}>
+                {item.code} <span style={{fontWeight:400,opacity:0.8}}>{type}</span>
+              </button>
+            )
+          })}
+        </div>
+        <div style={{padding:'8px 16px',borderTop:'1px solid #f3f4f6',fontSize:11,color:'#9ca3af'}}>
+          파란색 = 자사가공 · 회색 = 외주가공
+        </div>
       </div>
 
       {/* 공휴일 관리 */}
