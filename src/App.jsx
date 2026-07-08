@@ -164,8 +164,8 @@ function MainApp() {
             : page==='shipment'  ? <ShipmentManage transactions={transactions} stockMap={stockMap} onNavigate={setPage}/>
             : page==='history'   ? <History transactions={transactions} />
             : page==='processing'? <ProcessingManage stockMap={stockMap}/>
-            : page==='recall'    ? <RecallManage defaultCategory='리콜'/>
-            : page==='repair'    ? <RecallManage defaultCategory='Repair'/>
+            : page==='recall'    ? <RecallManage key='recall' defaultCategory='리콜'/>
+            : page==='repair'    ? <RecallManage key='repair' defaultCategory='Repair'/>
             : page==='shipcal'   ? <ShipmentCalendar transactions={transactions} stockMap={stockMap} onNavigate={setPage}/>
             : page==='admin'     ? <AdminPage />
             : null}
