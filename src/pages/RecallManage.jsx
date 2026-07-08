@@ -34,6 +34,7 @@ export default function RecallManage({ defaultCategory }) {
   const [roundFilter, setRoundFilter] = useState('전체')
   const [search, setSearch]   = useState('')
   const [dateType, setDateType] = useState('반출일')
+  const [itemFilter, setItemFilter] = useState('전체')
   const [catFilter, setCatFilter] = useState(defaultCategory||'전체')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo,   setDateTo]   = useState('')
@@ -70,6 +71,7 @@ export default function RecallManage({ defaultCategory }) {
   const filtered = useMemo(() => records
     .filter(r => roundFilter==='전체' || r.round===roundFilter)
     .filter(r => catFilter==='전체' || (r.category||'리콜')===catFilter)
+    .filter(r => itemFilter==='전체' || (Array.isArray(r.repairItems)?r.repairItems:([r.repairItem||''])).includes(itemFilter))
     .filter(r => !search || r.rfid?.toLowerCase().includes(search.toLowerCase()) ||
       (Array.isArray(r.repairItems)?r.repairItems:([r.repairItem||''])).join(' ').includes(search) ||
       r.memo?.includes(search))
@@ -232,6 +234,11 @@ export default function RecallManage({ defaultCategory }) {
           })}
         </div>
         <div style={{display:'flex',gap:6,alignItems:'center',flexWrap:'wrap'}}>
+          {/* 교체항목 필터 */}
+          <select value={itemFilter} onChange={e=>setItemFilter(e.target.value)} style={S.sel}>
+            <option value="전체">교체항목 전체</option>
+            {REPAIR_ITEMS.map(i=><option key={i} value={i}>{i}</option>)}
+          </select>
           <select value={dateType} onChange={e=>setDateType(e.target.value)} style={S.sel}>
             <option>반출일</option><option>반입일</option>
           </select>
@@ -253,8 +260,8 @@ export default function RecallManage({ defaultCategory }) {
               <col style={{width:110}}/><col style={{width:140}}/><col style={{width:75}}/>
             </> : <>
               <col style={{width:45}}/><col style={{width:110}}/><col/>
-              <col style={{width:70}}/><col style={{width:110}}/>
-              <col style={{width:110}}/><col style={{width:160}}/><col style={{width:75}}/>
+              <col style={{width:110}}/><col style={{width:110}}/>
+              <col style={{width:160}}/><col style={{width:75}}/>
             </>}
           </colgroup>
           <thead>
@@ -282,10 +289,10 @@ export default function RecallManage({ defaultCategory }) {
                     {r.category||'리콜'}
                   </span>
                 </td>
-                <td style={{...S.td,textAlign:'center'}}>
+                {defaultCategory==='Repair' && <td style={{...S.td,textAlign:'center'}}>
                   <span style={{...S.tag,background:r.payType==='유상'?'#fee2e2':'#dbeafe',
                     color:r.payType==='유상'?'#dc2626':'#2563eb'}}>{r.payType}</span>
-                </td>
+                </td>}
                 {defaultCategory==='Repair' && <td style={{...S.td,textAlign:'center',fontSize:12}}>{r.round}</td>}
                 <td style={{...S.td,textAlign:'center',fontSize:12}}>{r.outDate||'-'}</td>
                 <td style={{...S.td,textAlign:'center'}}>
