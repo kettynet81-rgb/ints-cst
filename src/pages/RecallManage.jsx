@@ -81,7 +81,7 @@ export default function RecallManage({ defaultCategory }) {
       if (dateTo   && (!d||d>dateTo))   return false
       return true
     })
-  , [records, roundFilter, search, dateType, dateFrom, dateTo])
+  , [records, roundFilter, catFilter, itemFilter, search, dateType, dateFrom, dateTo])
 
   const paidCount    = filtered.filter(r=>r.payType==='유상').length
   const freeCount    = filtered.filter(r=>r.payType==='무상').length
