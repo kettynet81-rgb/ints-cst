@@ -306,65 +306,7 @@ export default function RecallManage({ defaultCategory }) {
         </table>
       </div>
 
-      {/* 통계 탭 제거됨 */}
-      {tab==='통계' && (() => {
-        const rfidCount = {}
-        records.forEach(r => { rfidCount[r.rfid] = (rfidCount[r.rfid]||0)+1 })
-        const duplicates = Object.entries(rfidCount).filter(([,v])=>v>=2).sort((a,b)=>b[1]-a[1])
-        const typeCount = {}
-        records.forEach(r => {
-          const items = Array.isArray(r.repairItems)?r.repairItems:[r.repairItem||'기타']
-          items.forEach(t => { typeCount[t] = (typeCount[t]||0)+1 })
-        })
-        const typeRank = Object.entries(typeCount).sort((a,b)=>b[1]-a[1])
-        const maxCount = typeRank[0]?.[1] || 1
-        return (
-          <div style={{display:'flex',flexDirection:'column',gap:12}}>
-            <div style={{background:'#fff',borderRadius:8,border:'1px solid #e5e7eb',padding:16}}>
-              <div style={{fontWeight:700,fontSize:14,color:'#111827',marginBottom:12}}>📊 불량 유형별 발생 건수</div>
-              {typeRank.map(([type,count],i) => (
-                <div key={type} style={{marginBottom:10}}>
-                  <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
-                    <div style={{display:'flex',gap:8,alignItems:'center'}}>
-                      <span style={{fontWeight:700,color:'#9ca3af',fontSize:12,width:18}}>{i+1}</span>
-                      <span style={{fontSize:13,fontWeight:600,color:'#111827'}}>{type}</span>
-                    </div>
-                    <span style={{fontWeight:700,color:'#1e40af'}}>{count}건</span>
-                  </div>
-                  <div style={{background:'#f3f4f6',borderRadius:4,height:8}}>
-                    <div style={{background:'#1e40af',height:'100%',borderRadius:4,width:`${Math.round(count/maxCount*100)}%`}}/>
-                  </div>
-                </div>
-              ))}
-              {typeRank.length===0 && <div style={{color:'#9ca3af',fontSize:12}}>데이터 없음</div>}
-            </div>
-            <div style={{background:'#fff',borderRadius:8,border:'1px solid #e5e7eb',padding:16}}>
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
-                <div style={{fontWeight:700,fontSize:14,color:'#111827'}}>🔁 중복 RFID</div>
-                <span style={{background:duplicates.length>0?'#fee2e2':'#dcfce7',color:duplicates.length>0?'#dc2626':'#16a34a',padding:'2px 10px',borderRadius:10,fontSize:12,fontWeight:700}}>
-                  {duplicates.length>0?`${duplicates.length}건 발견`:'중복 없음'}
-                </span>
-              </div>
-              {duplicates.length>0 ? duplicates.map(([rfid,cnt]) => {
-                const recs = records.filter(r=>r.rfid===rfid)
-                return (
-                  <div key={rfid} style={{background:'#fff5f5',border:'1px solid #fca5a5',borderRadius:6,padding:'8px 12px',marginBottom:6}}>
-                    <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
-                      <span style={{fontWeight:700,color:'#dc2626',fontSize:14}}>{rfid}</span>
-                      <span style={{background:'#dc2626',color:'#fff',borderRadius:10,padding:'1px 8px',fontSize:11,fontWeight:700}}>{cnt}회</span>
-                    </div>
-                    {recs.map((r,i)=>(
-                      <div key={i} style={{fontSize:11,color:'#6b7280',marginBottom:2}}>
-                        {r.round} · {r.outDate||'-'} · {(Array.isArray(r.repairItems)?r.repairItems:[r.repairItem||'']).join(', ')}
-                      </div>
-                    ))}
-                  </div>
-                )
-              }) : <div style={{color:'#16a34a',fontSize:12,textAlign:'center',padding:16}}>✓ 중복된 RFID가 없습니다</div>}
-            </div>
-          </div>
-        )
-      })()}
+
 
       {/* 입력 탭 - 플로팅 버튼 */}
       <button onClick={openAdd} style={S.fab} title="개별 입력">＋</button>
