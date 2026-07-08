@@ -190,7 +190,7 @@ export default function RecallManage({ defaultCategory }) {
           <span style={S.badge('#d97706')}>미반입 {pendingCount}EA</span>
           <span style={{fontSize:13,fontWeight:700,color:'#374151'}}>총 {filtered.length}EA</span>
           <div style={{width:1,height:20,background:'#e5e7eb',margin:'0 4px'}}/>
-          <button onClick={downloadTemplate} style={{...S.btn,'#6b7280':1,background:'#f3f4f6',color:'#374151',border:'1px solid #d1d5db'}}>
+          <button onClick={downloadTemplate} style={{...S.btn,background:'#f3f4f6',color:'#374151',border:'1px solid #d1d5db'}}>
             📋 양식 다운
           </button>
           <label style={{...S.btn,background:'#1e40af',color:'#fff',border:'none',cursor:'pointer'}}>
