@@ -62,6 +62,36 @@ export default function AdminPage() {
     await deleteDoc(doc(db,'holidays',id))
   }
 
+
+  // 기존 리콜 데이터 일괄 업로드
+  const uploadRecallData = async () => {
+    if (!window.confirm('기존 리콜 이력 1,351건을 업로드합니다.\n(중복 확인 없이 전체 등록됩니다)\n\n계속하시겠습니까?')) return
+    
+    try {
+      const res = await fetch('/recall_data.json')
+      const data = await res.json()
+      
+      let count = 0
+      const BATCH_SIZE = 50
+      for (let i = 0; i < data.length; i += BATCH_SIZE) {
+        const batch = writeBatch(db)
+        const chunk = data.slice(i, i+BATCH_SIZE)
+        for (const r of chunk) {
+          batch.set(doc(collection(db,'recalls')), {
+            ...r,
+            repairItems: Array.isArray(r.repairItems) ? r.repairItems : [r.repairItems],
+            createdAt: serverTimestamp()
+          })
+          count++
+        }
+        await batch.commit()
+      }
+      alert(`완료: ${count}건 업로드됐습니다!`)
+    } catch(e) {
+      alert('오류: ' + e.message)
+    }
+  }
+
   // 출하확정 전체 취소 (재고 복구)
   const restoreAllConfirmed = async () => {
     if (!window.confirm('⚠ 출하 확정 전체 취소\n\n확정된 모든 출하계획을 취소하고\n차감된 재고를 전부 복구합니다.\n\n계속하시겠습니까?')) return
@@ -96,6 +126,18 @@ export default function AdminPage() {
 
   return (
     <div style={{padding:28}}>
+      {/* 기존 리콜 데이터 업로드 */}
+      <div style={{marginBottom:12,padding:'12px 14px',background:'#eff6ff',border:'1px solid #bfdbfe',borderRadius:8,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div>
+          <div style={{fontSize:13,fontWeight:700,color:'#1e40af'}}>📥 기존 리콜 이력 업로드</div>
+          <div style={{fontSize:11,color:'#3b82f6',marginTop:2}}>파싱된 기존 리콜 데이터 1,351건을 Firestore에 등록합니다</div>
+        </div>
+        <button onClick={uploadRecallData}
+          style={{padding:'7px 14px',background:'#1e40af',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:'inherit',whiteSpace:'nowrap'}}>
+          업로드 실행
+        </button>
+      </div>
+
       {/* 재고 복구 */}
       <div style={{marginBottom:12,padding:'12px 14px',background:'#fee2e2',border:'1px solid #fca5a5',borderRadius:8,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
         <div>
