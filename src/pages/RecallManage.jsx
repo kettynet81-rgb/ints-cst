@@ -35,6 +35,7 @@ export default function RecallManage() {
   const [search, setSearch]   = useState('')
   const [dateType, setDateType] = useState('반출일')
   const [catFilter, setCatFilter] = useState('전체')
+  const [tab, setTab] = useState('현황')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo,   setDateTo]   = useState('')
   const [loaded,   setLoaded]   = useState(false)
@@ -203,6 +204,21 @@ export default function RecallManage() {
         </div>
       </div>
 
+      {/* 탭 */}
+      <div style={{display:'flex',gap:0,background:'#fff',borderRadius:8,border:'1px solid #e5e7eb',overflow:'hidden',flexShrink:0}}>
+        {['현황','입력'].map(t=>(
+          <button key={t} onClick={()=>setTab(t)}
+            style={{flex:1,padding:'10px',border:'none',cursor:'pointer',fontFamily:'inherit',
+              fontSize:13,fontWeight:700,
+              background:tab===t?'#1e293b':'#fff',
+              color:tab===t?'#fff':'#6b7280',
+              borderRight:t==='현황'?'1px solid #e5e7eb':'none'}}>
+            {t==='현황'?'📋 현황':'✏️ 입력'}
+          </button>
+        ))}
+      </div>
+
+      {tab==='현황' && <>
       {/* 필터 */}
       <div style={{display:'flex',gap:8,alignItems:'flex-start',flexWrap:'wrap'}}>
         <div style={{display:'flex',gap:5,flexWrap:'wrap',flex:1}}>
@@ -306,8 +322,10 @@ export default function RecallManage() {
           </tbody>
         </table>
       </div>
+      </>
+      }
 
-      {/* 개별 입력 플로팅 버튼 */}
+      {/* 입력 탭 - 플로팅 버튼 */}
       <button onClick={openAdd} style={S.fab} title="개별 입력">＋</button>
 
       {/* 개별 입력 모달 */}
