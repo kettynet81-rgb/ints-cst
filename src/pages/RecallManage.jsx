@@ -6,7 +6,7 @@ import { writeLog } from '../utils/logger'
 import { downloadRecallTemplate, downloadRecallExcel } from '../utils/recallExcel'
 import * as XLSX from 'xlsx'
 
-const REPAIR_ITEMS = ['견시창 교체','반사판 교체','내부 볼트 파손','외부 볼트 파손','RFID 교체','파손','기타']
+const REPAIR_ITEMS = ['견시창 교체','반사판 교체','RFID 교체','CNT 파손','슬라이드 교체','FRONT COVER 교체','ARM 파손','볼트 파손/누락','외관 찍힘/변형','기타']
 const MEMO_PRESETS = ['RFID 구형','RFID 신형','구형TYPE','신형TYPE']
 const EMPTY_FORM   = { rfid:'', repairItems:[], payType:'유상', round:'', outDate:'', inDate:'', memo:'', category:'리콜' }
 
