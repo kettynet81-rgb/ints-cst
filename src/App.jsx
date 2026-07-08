@@ -34,18 +34,18 @@ function MainApp() {
 
   useEffect(() => {
     if (!currentUser) return
-// pending users 리스너
-    let unsubUsers = () => {}
-    if (userRole === 'admin') {
-      const qUsers = query(collection(db, 'users'), where('role', '==', 'pending'))
-      unsubUsers = onSnapshot(qUsers, snap => setPendingCount(snap.size))
-    }
     const q = query(collection(db, 'transactions'), orderBy('date', 'desc'))
     return onSnapshot(q, snap => {
       setTransactions(snap.docs.map(d => ({ id: d.id, ...d.data() })))
       setLoading(false)
     })
-  }, [currentUser, userRole])
+  }, [currentUser])
+
+  useEffect(() => {
+    if (userRole !== 'admin') { setPendingCount(0); return }
+    const q = query(collection(db, 'users'), where('role', '==', 'pending'))
+    return onSnapshot(q, snap => setPendingCount(snap.size))
+  }, [userRole])
 
   const stockMap = useMemo(() => {
     const map = {}
