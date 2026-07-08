@@ -206,14 +206,14 @@ export default function RecallManage() {
 
       {/* 탭 */}
       <div style={{display:'flex',gap:0,background:'#fff',borderRadius:8,border:'1px solid #e5e7eb',overflow:'hidden',flexShrink:0}}>
-        {['현황','입력'].map(t=>(
+        {['현황','통계','입력'].map(t=>(
           <button key={t} onClick={()=>setTab(t)}
             style={{flex:1,padding:'10px',border:'none',cursor:'pointer',fontFamily:'inherit',
               fontSize:13,fontWeight:700,
               background:tab===t?'#1e293b':'#fff',
               color:tab===t?'#fff':'#6b7280',
-              borderRight:t==='현황'?'1px solid #e5e7eb':'none'}}>
-            {t==='현황'?'📋 현황':'✏️ 입력'}
+              borderRight:t!=='입력'?'1px solid #e5e7eb':'none'}}>
+            {t==='현황'?'📋 현황':t==='통계'?'📊 통계':'✏️ 입력'}
           </button>
         ))}
       </div>
