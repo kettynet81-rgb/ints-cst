@@ -181,14 +181,11 @@ export default function RecallManage({ defaultCategory }) {
       {/* 헤더 */}
       <div style={S.topBar}>
         <div>
-          <div style={S.pageTitle}>🔧 리콜 수리 관리</div>
+          <div style={S.pageTitle}>{defaultCategory==='Repair'?'🛠 Repair 관리':'🔧 리콜 관리'}</div>
           <div style={S.sub}>C-CASSETTE 반출/반입 수리 이력</div>
         </div>
         <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
-          <span style={S.badge('#dc2626')}>유상 {paidCount}EA</span>
-          <span style={S.badge('#2563eb')}>무상 {freeCount}EA</span>
-          <span style={S.badge('#d97706')}>미반입 {pendingCount}EA</span>
-          <span style={{fontSize:13,fontWeight:700,color:'#374151'}}>총 {filtered.length}EA</span>
+          <span style={{fontSize:13,fontWeight:700,color:'#374151'}}>총 {filtered.length}건</span>
           <div style={{width:1,height:20,background:'#e5e7eb',margin:'0 4px'}}/>
           <button onClick={downloadTemplate} style={{...S.btn,background:'#f3f4f6',color:'#374151',border:'1px solid #d1d5db'}}>
             📋 양식 다운
