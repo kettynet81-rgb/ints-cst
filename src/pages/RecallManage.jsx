@@ -210,6 +210,13 @@ export default function RecallManage({ defaultCategory }) {
 
         </div>
         <div style={{display:'flex',gap:6,alignItems:'center',flexWrap:'wrap'}}>
+          {/* 차수 필터 - Repair만 */}
+          {defaultCategory==='Repair' && (
+            <input value={roundFilter==='전체'?'':roundFilter}
+              onChange={e=>setRoundFilter(e.target.value||'전체')}
+              placeholder="차수 검색 (예: 12차)"
+              style={{...S.inp, width:160}}/>
+          )}
           {/* 교체항목 필터 */}
           <select value={itemFilter} onChange={e=>setItemFilter(e.target.value)} style={S.sel}>
             <option value="전체">교체항목 전체</option>
