@@ -35,7 +35,7 @@ export default function RecallManage({ defaultCategory }) {
   const [search, setSearch]   = useState('')
   const [dateType, setDateType] = useState('반출일')
   const [itemFilter, setItemFilter] = useState('전체')
-  const [catFilter, setCatFilter] = useState(defaultCategory||'전체')
+  const [catFilter, setCatFilter] = useState(defaultCategory==='Repair'?'Repair':defaultCategory==='리콜'?'리콜':'전체')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo,   setDateTo]   = useState('')
   const [loaded,   setLoaded]   = useState(false)
