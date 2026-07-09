@@ -264,14 +264,15 @@ export default function RecallManage({ defaultCategory }) {
       <div style={S.tableCard}>
         <table style={{width:'100%',maxWidth:1100,borderCollapse:'collapse',tableLayout:'fixed'}}>
           <colgroup>
+            <col style={{width:36}}/>
             {defaultCategory==='Repair' ? <>
               <col style={{width:45}}/><col style={{width:110}}/><col/>
               <col style={{width:70}}/><col style={{width:70}}/><col style={{width:105}}/>
-              <col style={{width:110}}/><col style={{width:140}}/><col style={{width:75}}/>
+              <col style={{width:110}}/><col style={{width:140}}/>
             </> : <>
               <col style={{width:45}}/><col style={{width:110}}/><col/>
               <col style={{width:110}}/><col style={{width:110}}/>
-              <col style={{width:160}}/><col style={{width:75}}/>
+              <col style={{width:160}}/>
             </>}
           </colgroup>
           <thead>
