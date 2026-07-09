@@ -104,10 +104,18 @@ function MainApp() {
               {!sideCollapsed && <div style={S.groupLabel}>{g}</div>}
               {NAV.filter(n=>n.group===g).map(item => (
                 <button key={item.id} title={item.label}
-                  style={page===item.id ? S.navActive : S.navItem}
+                  style={{...(page===item.id ? S.navActive : S.navItem), position:'relative'}}
                   onClick={()=>setPage(item.id)}>
                   <span style={{fontSize:14,width:18,textAlign:'center',flexShrink:0}}>{item.icon}</span>
-                  {!sideCollapsed && <span>{item.label}</span>}
+                  {!sideCollapsed && <span style={{flex:1}}>{item.label}</span>}
+                  {item.id==='admin' && pendingCount>0 && (
+                    <span style={{background:'#ef4444',color:'#fff',borderRadius:'50%',
+                      width:17,height:17,fontSize:10,fontWeight:700,
+                      display:'flex',alignItems:'center',justifyContent:'center',
+                      flexShrink:0,animation:'pulse 1.2s infinite'}}>
+                      {pendingCount}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
