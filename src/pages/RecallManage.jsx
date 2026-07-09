@@ -207,13 +207,6 @@ export default function RecallManage({ defaultCategory }) {
       {/* 필터 */}
       <div style={{display:'flex',gap:8,alignItems:'flex-start',flexWrap:'wrap'}}>
         <div style={{display:'flex',gap:5,flexWrap:'wrap',flex:1}}>
-          {['전체','리콜','Repair'].map(cat=>(
-            <button key={cat} onClick={()=>setCatFilter(cat)}
-              style={{padding:'5px 14px',borderRadius:20,border:'1px solid',cursor:'pointer',fontSize:12,fontFamily:'inherit',fontWeight:600,
-                background:catFilter===cat?'#1e293b':'#fff',color:catFilter===cat?'#fff':'#374151',borderColor:catFilter===cat?'#1e293b':'#d1d5db'}}>
-              {cat}
-            </button>
-          ))}
 
         </div>
         <div style={{display:'flex',gap:6,alignItems:'center',flexWrap:'wrap'}}>
