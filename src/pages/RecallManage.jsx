@@ -311,12 +311,7 @@ export default function RecallManage({ defaultCategory }) {
                   }
                 </td>
                 <td style={{...S.td,fontSize:11,color:'#6b7280',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:150}}>{r.memo||''}</td>
-                <td style={{...S.td,textAlign:'center'}}>
-                  <div style={{display:'flex',gap:3,justifyContent:'center'}}>
-                    <button onClick={()=>openEdit(r)} style={S.editBtn}>수정</button>
-                    <button onClick={()=>deleteRecord(r)} style={S.delBtn}>삭제</button>
-                  </div>
-                </td>
+
               </tr>
             ))}
           </tbody>
