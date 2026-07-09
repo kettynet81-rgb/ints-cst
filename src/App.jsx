@@ -9,6 +9,7 @@ import ShipmentManage from './pages/ShipmentManage'
 import History from './pages/History'
 import AdminPage from './pages/AdminPage'
 import RecallManage from './pages/RecallManage'
+import AdminDelete from './pages/AdminDelete'
 import ProcessingManage from './pages/ProcessingManage'
 import ShipmentCalendar from './pages/ShipmentCalendar'
 import LoginPage from './pages/LoginPage'
@@ -164,6 +165,7 @@ function MainApp() {
             : page==='shipment'  ? <ShipmentManage transactions={transactions} stockMap={stockMap} onNavigate={setPage}/>
             : page==='history'   ? <History transactions={transactions} />
             : page==='processing'? <ProcessingManage stockMap={stockMap}/>
+            : page==='admindel'  ? <AdminDelete/>
             : page==='recall'    ? <RecallManage key='recall' defaultCategory='리콜'/>
             : page==='repair'    ? <RecallManage key='repair' defaultCategory='Repair'/>
             : page==='shipcal'   ? <ShipmentCalendar transactions={transactions} stockMap={stockMap} onNavigate={setPage}/>
