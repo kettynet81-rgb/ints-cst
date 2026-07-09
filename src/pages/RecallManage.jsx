@@ -149,7 +149,7 @@ export default function RecallManage({ defaultCategory }) {
     const rows = XLSX.utils.sheet_to_json(ws, { header:1, raw:false, defval:'' })
 
     // 헤더 행 찾기 (RFID NO 포함된 행)
-    let headerIdx = rows.findIndex(r => r.some(v => String(v).includes('RFID')))
+    let headerIdx = rows.findIndex(r => r.some(v => String(v).trim() === 'RFID NO'))
     if (headerIdx < 0) { alert('헤더를 찾을 수 없습니다. (RFID NO 컬럼 필요)'); setUploading(false); return }
 
     const headers = rows[headerIdx].map(h => String(h).trim())
