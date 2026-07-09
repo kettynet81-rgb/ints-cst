@@ -264,15 +264,14 @@ export default function RecallManage({ defaultCategory }) {
       <div style={S.tableCard}>
         <table style={{width:'100%',maxWidth:1100,borderCollapse:'collapse',tableLayout:'fixed'}}>
           <colgroup>
-            <col style={{width:36}}/>
+            <col style={{width:30}}/>
             {defaultCategory==='Repair' ? <>
-              <col style={{width:45}}/><col style={{width:110}}/><col/>
-              <col style={{width:70}}/><col style={{width:70}}/><col style={{width:105}}/>
-              <col style={{width:110}}/><col style={{width:140}}/>
+              <col style={{width:40}}/><col style={{width:90}}/><col/>
+              <col style={{width:55}}/><col style={{width:55}}/><col style={{width:90}}/>
+              <col style={{width:95}}/><col style={{width:95}}/><col/>
             </> : <>
-              <col style={{width:45}}/><col style={{width:110}}/><col/>
-              <col style={{width:110}}/><col style={{width:110}}/>
-              <col style={{width:160}}/>
+              <col style={{width:40}}/><col style={{width:90}}/><col/>
+              <col style={{width:95}}/><col style={{width:95}}/><col/>
             </>}
           </colgroup>
           <thead>
@@ -298,7 +297,7 @@ export default function RecallManage({ defaultCategory }) {
                   ))}
                 </td>
                 {defaultCategory==='Repair' && <td style={{...S.td,textAlign:'center'}}>
-                  <span style={{...S.tag,background:r.payType==='유상'?'#fee2e2':'#dbeafe',
+                  <span style={{...S.tag,fontSize:10,padding:'1px 5px',background:r.payType==='유상'?'#fee2e2':'#dbeafe',
                     color:r.payType==='유상'?'#dc2626':'#2563eb'}}>{r.payType}</span>
                 </td>}
                 {defaultCategory==='Repair' && <td style={{...S.td,textAlign:'center',fontSize:12}}>{r.round}</td>}
