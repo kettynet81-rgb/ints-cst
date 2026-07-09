@@ -50,9 +50,11 @@ export default function RecallManage({ defaultCategory }) {
     return onSnapshot(q, snap => { setRecords(snap.docs.map(d=>({id:d.id,...d.data()}))); setLoaded(true) })
   }, [])
 
+  const repairRecords = useMemo(() => records.filter(r=>(r.category||'리콜')==='Repair'), [records])
+
   const roundInfo = useMemo(() => {
     const m = {}
-    records.forEach(r => {
+    repairRecords.forEach(r => {
       if (!r.round) return
       if (!m[r.round]) m[r.round] = { outDates:[], inDates:[], paid:0, free:0, total:0 }
       if (r.outDate) m[r.round].outDates.push(r.outDate)
@@ -61,12 +63,12 @@ export default function RecallManage({ defaultCategory }) {
       m[r.round].total++
     })
     return m
-  }, [records])
+  }, [repairRecords])
 
   const rounds = useMemo(() => {
-    const s = new Set(records.map(r=>r.round).filter(Boolean))
+    const s = new Set(repairRecords.map(r=>r.round).filter(Boolean))
     return ['전체', ...Array.from(s).sort((a,b)=>parseInt(b)-parseInt(a))]
-  }, [records])
+  }, [repairRecords])
 
   const filtered = useMemo(() => records
     .filter(r => roundFilter==='전체' || r.round===roundFilter)
