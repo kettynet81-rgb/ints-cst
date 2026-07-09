@@ -212,6 +212,15 @@ export default function RecallManage({ defaultCategory }) {
           {selected.size > 0 && (
             <>
               <span style={{fontSize:12,color:'#1e40af',fontWeight:600}}>{selected.size}건 선택</span>
+              {selected.size===1 && (
+                <button onClick={()=>{
+                  const r = filtered.find(r=>r.id===[...selected][0])
+                  if(r) openEdit(r)
+                }}
+                  style={{...S.btn,background:'#1e40af',color:'#fff',border:'none',cursor:'pointer'}}>
+                  ✏️ 수정
+                </button>
+              )}
               <button onClick={deleteSelected}
                 style={{...S.btn,background:'#dc2626',color:'#fff',border:'none',cursor:'pointer'}}>
                 🗑 선택 삭제
