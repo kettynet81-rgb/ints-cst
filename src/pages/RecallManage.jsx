@@ -75,8 +75,8 @@ export default function RecallManage({ defaultCategory }) {
     .filter(r => catFilter==='전체' || (r.category||'리콜')===catFilter)
     .filter(r => itemFilter==='전체' || (Array.isArray(r.repairItems)?r.repairItems:([r.repairItem||''])).includes(itemFilter))
     .filter(r => !search || r.rfid?.toLowerCase().includes(search.toLowerCase()) ||
-      (Array.isArray(r.repairItems)?r.repairItems:([r.repairItem||''])).join(' ').includes(search) ||
-      r.memo?.includes(search))
+      (Array.isArray(r.repairItems)?r.repairItems:([r.repairItem||''])).join(' ').toLowerCase().includes(search.toLowerCase()) ||
+      r.memo?.toLowerCase().includes(search.toLowerCase()))
     .filter(r => {
       const d = dateType==='반출일' ? r.outDate : r.inDate
       if (dateFrom && (!d||d<dateFrom)) return false
