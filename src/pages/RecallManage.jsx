@@ -44,6 +44,7 @@ export default function RecallManage({ defaultCategory }) {
   const [editId,   setEditId]   = useState(null)
   const [saving,   setSaving]   = useState(false)
   const [uploading,setUploading]= useState(false)
+  const [selected, setSelected]  = useState(new Set())
 
   useEffect(() => {
     const q = query(collection(db,'recalls'), orderBy('createdAt','desc'))
@@ -90,6 +91,14 @@ export default function RecallManage({ defaultCategory }) {
   const pendingCount = filtered.filter(r=>!r.inDate).length
 
   const setF = (k,v) => setForm(f=>({...f,[k]:v}))
+  const toggleSel  = (id) => setSelected(s => { const n=new Set(s); n.has(id)?n.delete(id):n.add(id); return n })
+  const selectAll  = () => setSelected(new Set(filtered.map(r=>r.id)))
+  const clearSel   = () => setSelected(new Set())
+  const deleteSelected = async () => {
+    if (!window.confirm(`선택한 ${selected.size}건을 삭제하시겠습니까?`)) return
+    for (const id of selected) await deleteDoc(doc(db,'recalls',id))
+    setSelected(new Set())
+  }
 
   const openAdd = () => { setForm(EMPTY_FORM); setEditId(null); setModal(true) }
   const openEdit = (r) => {
@@ -200,6 +209,23 @@ export default function RecallManage({ defaultCategory }) {
             {uploading?'업로드 중...':'📂 엑셀 업로드'}
             <input type="file" accept=".xlsx,.xls" style={{display:'none'}} onChange={handleUpload} disabled={uploading}/>
           </label>
+          {selected.size > 0 && (
+            <>
+              <span style={{fontSize:12,color:'#1e40af',fontWeight:600}}>{selected.size}건 선택</span>
+              <button onClick={deleteSelected}
+                style={{...S.btn,background:'#dc2626',color:'#fff',border:'none',cursor:'pointer'}}>
+                🗑 선택 삭제
+              </button>
+              <button onClick={clearSel}
+                style={{...S.btn,background:'#f3f4f6',color:'#374151',border:'1px solid #d1d5db',cursor:'pointer'}}>
+                선택 해제
+              </button>
+            </>
+          )}
+          <button onClick={()=>selected.size===filtered.length?clearSel():selectAll()}
+            style={{...S.btn,background:'#f3f4f6',color:'#374151',border:'1px solid #d1d5db',cursor:'pointer'}}>
+            {selected.size===filtered.length&&selected.size>0?'전체 해제':'전체 선택'}
+          </button>
           <button onClick={downloadExcel} style={{...S.btn,background:'#16a34a',color:'#fff',border:'none'}}>
             ⬇ 엑셀 다운
           </button>
@@ -257,7 +283,11 @@ export default function RecallManage({ defaultCategory }) {
             {!loaded&&<tr><td colSpan={9} style={{textAlign:'center',padding:40,color:'#9ca3af'}}>로딩 중...</td></tr>}
             {loaded&&filtered.length===0&&<tr><td colSpan={9} style={{textAlign:'center',padding:40,color:'#9ca3af'}}>데이터가 없습니다</td></tr>}
             {filtered.map((r,i)=>(
-              <tr key={r.id} style={{background:!r.inDate?'#fffbeb':i%2===0?'#f8fafc':'#fff'}}>
+              <tr key={r.id} style={{background:selected.has(r.id)?'#eff6ff':!r.inDate?'#fffbeb':i%2===0?'#f8fafc':'#fff'}}>
+                <td style={{...S.td,textAlign:'center'}}>
+                  <input type="checkbox" checked={selected.has(r.id)}
+                    onChange={()=>toggleSel(r.id)} style={{cursor:'pointer'}}/>
+                </td>
                 <td style={{...S.td,textAlign:'center',color:'#9ca3af',fontSize:11}}>{i+1}</td>
                 <td style={{...S.td,fontWeight:700,color:'#1e40af',letterSpacing:1}}>{r.rfid}</td>
                 <td style={{...S.td,fontSize:12}}>
