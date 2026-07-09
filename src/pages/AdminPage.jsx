@@ -64,6 +64,17 @@ export default function AdminPage() {
 
 
 
+
+  // 리콜 전체 삭제
+  const deleteAllRecall = async () => {
+    if (!window.confirm('리콜 데이터를 전부 삭제하시겠습니까?\n(Repair 데이터는 유지됩니다)')) return
+    const snap = await getDocs(query(collection(db,'recalls'), where('category','==','리콜')))
+    const batch = writeBatch(db)
+    snap.docs.forEach(d => batch.delete(doc(db,'recalls',d.id)))
+    await batch.commit()
+    alert(`${snap.docs.length}건 삭제 완료`)
+  }
+
   // Repair 1차 데이터 업로드
   const uploadRepairData = async () => {
     if (!window.confirm('Repair 1차 28건을 업로드하시겠습니까?')) return
@@ -108,6 +119,18 @@ export default function AdminPage() {
 
   return (
     <div style={{padding:28}}>
+      {/* 리콜 전체 삭제 */}
+      <div style={{marginBottom:12,padding:'12px 14px',background:'#fee2e2',border:'1px solid #fca5a5',borderRadius:8,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div>
+          <div style={{fontSize:13,fontWeight:700,color:'#991b1b'}}>🗑 리콜 데이터 전체 삭제</div>
+          <div style={{fontSize:11,color:'#b91c1c',marginTop:2}}>Repair 데이터는 유지됩니다</div>
+        </div>
+        <button onClick={deleteAllRecall}
+          style={{padding:'7px 14px',background:'#dc2626',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:'inherit',whiteSpace:'nowrap'}}>
+          삭제 실행
+        </button>
+      </div>
+
       {/* Repair 1차 업로드 */}
       <div style={{marginBottom:12,padding:'12px 14px',background:'#f0fdf4',border:'1px solid #bbf7d0',borderRadius:8,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
         <div>
