@@ -162,7 +162,7 @@ export default function RecallManage({ defaultCategory }) {
       const repairItems = repairRaw.split(/[,、]+/).map(s=>s.trim()).filter(Boolean)
       items.push({
         rfid, repairItems,
-        category: defaultCategory || '리콜',
+        category: defaultCategory==='Repair' ? 'Repair' : '리콜',
         payType: String(row[iPayType]||'유상').includes('무') ? '무상' : '유상',
         round:   String(row[iRound]||'').trim(),
         outDate: parseDate(String(row[iOut]||'')),
