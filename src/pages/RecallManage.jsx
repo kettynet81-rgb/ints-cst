@@ -214,28 +214,7 @@ export default function RecallManage({ defaultCategory }) {
               {cat}
             </button>
           ))}
-          {defaultCategory==='Repair' && <><div style={{width:1,background:'#e5e7eb',margin:'0 4px'}}/>
-          {rounds.map(r => {
-            const info = roundInfo[r]
-            const outMin = info?.outDates.sort()[0]?.slice(5)
-            const inMax  = info?.inDates.sort().at(-1)?.slice(5)
-            return (
-              <button key={r} onClick={()=>setRoundFilter(r)}
-                style={{padding:'5px 12px',borderRadius:20,border:'1px solid',cursor:'pointer',
-                  fontSize:12,fontFamily:'inherit',fontWeight:600,lineHeight:1.4,textAlign:'left',
-                  background:roundFilter===r?'#1e293b':'#fff',
-                  color:roundFilter===r?'#fff':'#374151',
-                  borderColor:roundFilter===r?'#1e293b':'#d1d5db'}}>
-                <div>{r}</div>
-                {r!=='전체'&&info&&(
-                  <div style={{fontSize:9,opacity:0.8,fontWeight:400}}>
-                    {outMin}{inMax?'~'+inMax:'(진행중)'} · 유{info.paid}/무{info.free}
-                  </div>
-                )}
-              </button>
-            )
-          })}</>
-          }
+
         </div>
         <div style={{display:'flex',gap:6,alignItems:'center',flexWrap:'wrap'}}>
           {/* 교체항목 필터 */}
