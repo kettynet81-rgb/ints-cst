@@ -19,7 +19,7 @@ import PrintModal from './components/PrintModal'
 
 function MainApp() {
   const { currentUser, userRole, userData, logout } = useAuth()
-  const [page, setPage] = useState('dashboard')
+  const [page, setPage] = useState(new URLSearchParams(window.location.search).get('page')||'dashboard')
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
   const [sideCollapsed, setSideCollapsed] = useState(false)
