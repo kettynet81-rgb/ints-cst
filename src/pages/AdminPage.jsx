@@ -63,6 +63,20 @@ export default function AdminPage() {
   }
 
 
+
+  // Repair 1차 데이터 업로드
+  const uploadRepairData = async () => {
+    if (!window.confirm('Repair 1차 28건을 업로드하시겠습니까?')) return
+    try {
+      const res = await fetch('/repair_1차.json')
+      const data = await res.json()
+      const batch = writeBatch(db)
+      data.forEach(r => batch.set(doc(collection(db,'recalls')), { ...r, createdAt: serverTimestamp() }))
+      await batch.commit()
+      alert(`완료: ${data.length}건 업로드됐습니다!`)
+    } catch(e) { alert('오류: ' + e.message) }
+  }
+
   // 기존 리콜 데이터 일괄 업로드
   const uploadRecallData = async () => {
     if (!window.confirm('기존 리콜 이력 1,351건을 업로드합니다.\n(중복 확인 없이 전체 등록됩니다)\n\n계속하시겠습니까?')) return
@@ -94,6 +108,18 @@ export default function AdminPage() {
 
   return (
     <div style={{padding:28}}>
+      {/* Repair 1차 업로드 */}
+      <div style={{marginBottom:12,padding:'12px 14px',background:'#f0fdf4',border:'1px solid #bbf7d0',borderRadius:8,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div>
+          <div style={{fontSize:13,fontWeight:700,color:'#166534'}}>🛠 Repair 1차 데이터 업로드</div>
+          <div style={{fontSize:11,color:'#16a34a',marginTop:2}}>2025-12-10 반출 / 2025-12-22 반입 28건</div>
+        </div>
+        <button onClick={uploadRepairData}
+          style={{padding:'7px 14px',background:'#16a34a',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:'inherit',whiteSpace:'nowrap'}}>
+          업로드 실행
+        </button>
+      </div>
+
       {/* 기존 리콜 데이터 업로드 */}
       <div style={{marginBottom:12,padding:'12px 14px',background:'#eff6ff',border:'1px solid #bfdbfe',borderRadius:8,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
         <div>
