@@ -7,20 +7,20 @@ export default function AdminDelete() {
   const [count, setCount] = useState(0)
 
   const run = async () => {
-    if (!window.confirm('recalls 컬렉션 전체를 삭제합니다. 계속하시겠습니까?')) return
+    if (!window.confirm('Repair가 아닌 모든 리콜 데이터를 삭제합니다.\nRepair 데이터는 유지됩니다.\n\n계속하시겠습니까?')) return
     setStatus('삭제 중...')
     const snap = await getDocs(collection(db,'recalls'))
-    const docs = snap.docs
+    const toDelete = snap.docs.filter(d => (d.data().category||'리콜') !== 'Repair')
     const CHUNK = 400
     let deleted = 0
-    for (let i = 0; i < docs.length; i += CHUNK) {
+    for (let i = 0; i < toDelete.length; i += CHUNK) {
       const batch = writeBatch(db)
-      docs.slice(i, i+CHUNK).forEach(d => batch.delete(doc(db,'recalls',d.id)))
+      toDelete.slice(i, i+CHUNK).forEach(d => batch.delete(doc(db,'recalls',d.id)))
       await batch.commit()
-      deleted += Math.min(CHUNK, docs.length - i)
+      deleted += Math.min(CHUNK, toDelete.length - i)
       setCount(deleted)
     }
-    setStatus(`완료: ${deleted}건 삭제`)
+    setStatus(`완료: ${deleted}건 삭제 (Repair ${snap.docs.length - deleted}건 유지)`)
   }
 
   return (
