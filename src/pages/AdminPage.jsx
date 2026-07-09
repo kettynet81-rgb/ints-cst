@@ -27,6 +27,11 @@ export default function AdminPage() {
     return onSnapshot(q, snap => setHolidays(snap.docs.map(d => ({id:d.id,...d.data()}))))
   }, [])
 
+  const deleteUser = async (uid, name) => {
+    if (!window.confirm(`${name} 사용자를 삭제하시겠습니까?`)) return
+    await deleteDoc(doc(db, 'users', uid))
+  }
+
   const changeRole = async (uid, role) => {
     await updateDoc(doc(db, "users", uid), { role })
   }
@@ -250,6 +255,10 @@ export default function AdminPage() {
             </>}
             {(u.role==='rejected'||u.role==='blocked') &&
               <button onClick={()=>changeRole(u.id,'approved')} style={S.btnApprove}>복구</button>}
+            <button onClick={()=>deleteUser(u.id, u.name)}
+              style={{padding:'5px 10px',background:'none',border:'1px solid #d1d5db',borderRadius:5,cursor:'pointer',fontSize:11,color:'#9ca3af',fontFamily:'inherit'}}>
+              삭제
+            </button>
           </div>
         ))}
       </div>
