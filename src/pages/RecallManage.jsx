@@ -266,12 +266,12 @@ export default function RecallManage({ defaultCategory }) {
           <colgroup>
             <col style={{width:30}}/>
             {defaultCategory==='Repair' ? <>
-              <col style={{width:40}}/><col style={{width:90}}/><col/>
-              <col style={{width:55}}/><col style={{width:55}}/><col style={{width:90}}/>
-              <col style={{width:95}}/><col style={{width:95}}/><col/>
+              <col style={{width:40}}/><col style={{width:85}}/><col style={{width:180}}/>
+              <col style={{width:60}}/><col style={{width:55}}/><col style={{width:85}}/>
+              <col style={{width:100}}/><col style={{width:100}}/><col/>
             </> : <>
-              <col style={{width:40}}/><col style={{width:90}}/><col/>
-              <col style={{width:95}}/><col style={{width:95}}/><col/>
+              <col style={{width:40}}/><col style={{width:85}}/><col style={{width:200}}/>
+              <col style={{width:100}}/><col style={{width:100}}/><col/>
             </>}
           </colgroup>
           <thead>
