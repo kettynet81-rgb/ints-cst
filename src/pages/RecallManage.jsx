@@ -294,7 +294,7 @@ export default function RecallManage({ defaultCategory }) {
               <tr key={r.id} style={{background:selected.has(r.id)?'#eff6ff':!r.inDate?'#fffbeb':i%2===0?'#f8fafc':'#fff'}}>
                 <td style={{...S.td,textAlign:'center'}}>
                   <input type="checkbox" checked={selected.has(r.id)}
-                    onChange={()=>toggleSel(r.id)} style={{cursor:'pointer'}}/>
+                    onChange={()=>toggleSel(r.id)} style={{cursor:'pointer',width:15,height:15}}/>
                 </td>
                 <td style={{...S.td,textAlign:'center',color:'#9ca3af',fontSize:11}}>{i+1}</td>
                 <td style={{...S.td,fontWeight:700,color:'#1e40af',letterSpacing:1}}>{r.rfid}</td>
