@@ -74,9 +74,12 @@ export default function RecallManage({ defaultCategory }) {
   const filtered = useMemo(() => records
     .filter(r => roundFilter==='전체' || (r.round||'').includes(roundFilter))
     .filter(r => catFilter==='전체' || (r.category||'리콜')===catFilter)
-    .filter(r => itemFilter==='전체' || 
-      (Array.isArray(r.repairItems)?r.repairItems:([r.repairItem||''])).includes(itemFilter) ||
-      (r.memo||'').includes(itemFilter))
+    .filter(r => {
+      if (itemFilter==='전체') return true
+      const items = Array.isArray(r.repairItems)?r.repairItems:([r.repairItem||''])
+      return items.some(i => i.includes(itemFilter) || itemFilter.includes(i)) ||
+             (r.memo||'').toLowerCase().includes(itemFilter.toLowerCase())
+    })
     .filter(r => !search || r.rfid?.toLowerCase().includes(search.toLowerCase()) ||
       (Array.isArray(r.repairItems)?r.repairItems:([r.repairItem||''])).join(' ').toLowerCase().includes(search.toLowerCase()) ||
       r.memo?.toLowerCase().includes(search.toLowerCase()))
