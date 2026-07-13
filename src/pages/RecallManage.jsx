@@ -283,9 +283,19 @@ export default function RecallManage({ defaultCategory }) {
             </>}
           </colgroup>
           <thead>
-            <tr>{['NO','RFID NO','교체 항목','유·무상','차수','반출일','반입일','비고',''].map((h,i)=>(
-              <th key={i} style={S.th}>{h}</th>
-            ))}</tr>
+            <tr>
+              <th style={{...S.th,width:30,textAlign:'center'}}>
+                <input type="checkbox"
+                  checked={filtered.length>0&&filtered.every(r=>selected.has(r.id))}
+                  onChange={e=>e.target.checked?selectAll():clearSel()}
+                  style={{cursor:'pointer',width:15,height:15}}/>
+              </th>
+              {(defaultCategory==='Repair'
+                ? ['NO','RFID NO','교체 항목','유·무상','차수','반출일','반입일','비고']
+                : ['NO','RFID NO','교체 항목','반출일','반입일','비고']).map((h,i)=>(
+                <th key={i} style={S.th}>{h}</th>
+              ))}
+            </tr>
           </thead>
           <tbody>
             {!loaded&&<tr><td colSpan={9} style={{textAlign:'center',padding:40,color:'#9ca3af'}}>로딩 중...</td></tr>}
