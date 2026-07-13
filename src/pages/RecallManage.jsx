@@ -109,7 +109,6 @@ export default function RecallManage({ defaultCategory }) {
 
   const save = async () => {
     if (!form.rfid.trim()||!form.repairItems.length) return
-    if (defaultCategory==='Repair' && !form.round.trim()) return
     setSaving(true)
     const data = { rfid:form.rfid.trim().toUpperCase(), repairItems:form.repairItems, payType:form.payType,
       round:form.round.trim(), outDate:parseDate(form.outDate), inDate:parseDate(form.inDate), memo:form.memo.trim() }
