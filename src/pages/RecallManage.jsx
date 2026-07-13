@@ -157,10 +157,10 @@ export default function RecallManage({ defaultCategory }) {
     const iRfid    = col('RFID NO') >= 0 ? col('RFID NO') : col('RFID')
     const iRepair  = col('교체 항목') >= 0 ? col('교체 항목') : col('교체')
     const iPayType = col('유·무상') >= 0 ? col('유·무상') : col('유')
-    const iRound   = col('차수')
+    const iRound   = col('차수') >= 0 ? col('차수') : (iRfid >= 0 ? iRfid + 3 : 3)
     const iOut     = col('반출일') >= 0 ? col('반출일') : col('반출')
     const iIn      = col('반입일') >= 0 ? col('반입일') : col('반입')
-    const iMemo    = col('비고')
+    const iMemo    = col('비고') >= 0 ? col('비고') : col('메모')
 
     const items = []
     for (let i = headerIdx+1; i < rows.length; i++) {
