@@ -77,8 +77,9 @@ export default function RecallManage({ defaultCategory }) {
     .filter(r => {
       if (itemFilter==='전체') return true
       const items = Array.isArray(r.repairItems)?r.repairItems:([r.repairItem||''])
-      return items.some(i => i.includes(itemFilter) || itemFilter.includes(i)) ||
-             (r.memo||'').toLowerCase().includes(itemFilter.toLowerCase())
+      const keywords = ITEM_KEYWORDS[itemFilter] || [itemFilter]
+      const allText = [...items, r.memo||''].join(' ').toUpperCase()
+      return keywords.some(k => allText.includes(k.toUpperCase()))
     })
     .filter(r => !search || r.rfid?.toLowerCase().includes(search.toLowerCase()) ||
       (Array.isArray(r.repairItems)?r.repairItems:([r.repairItem||''])).join(' ').toLowerCase().includes(search.toLowerCase()) ||
@@ -95,6 +96,19 @@ export default function RecallManage({ defaultCategory }) {
   const freeCount    = filtered.filter(r=>r.payType==='무상').length
   const pendingCount = filtered.filter(r=>!r.inDate).length
 
+
+
+  const ITEM_KEYWORDS = {
+    'RFID 교체':       ['RFID','READ'],
+    '반사판 교체':      ['반사판'],
+    'CNT 파손':        ['CNT'],
+    '견시창 교체':      ['견시창','HOLE'],
+    '슬라이드 교체':    ['슬라이드'],
+    'FRONT COVER 교체':['FRONT'],
+    'ARM 파손':        ['ARM'],
+    '볼트 파손/누락':   ['볼트','BOLT'],
+    '외관 찍힘/변형':   ['찍힘','변형'],
+  }
 
   const normalizeItems = (raw) => {
     if (!raw) return ['기타']
