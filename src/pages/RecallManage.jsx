@@ -45,6 +45,7 @@ export default function RecallManage({ defaultCategory }) {
   const [saving,   setSaving]   = useState(false)
   const [uploading,setUploading]= useState(false)
   const [selected, setSelected]  = useState(new Set())
+  const [showDups, setShowDups]   = useState(false)
 
   useEffect(() => {
     const q = query(collection(db,'recalls'), orderBy('createdAt','desc'))
@@ -94,6 +95,12 @@ export default function RecallManage({ defaultCategory }) {
 
   const paidCount    = filtered.filter(r=>r.payType==='유상').length
   const freeCount    = filtered.filter(r=>r.payType==='무상').length
+  const dupRfids = useMemo(() => {
+    const count = {}
+    filtered.forEach(r => { count[r.rfid] = (count[r.rfid]||0)+1 })
+    return Object.entries(count).filter(([,v])=>v>=2).sort((a,b)=>b[1]-a[1])
+  }, [filtered])
+
   const pendingCount = filtered.filter(r=>!r.inDate).length
 
 
@@ -270,11 +277,53 @@ export default function RecallManage({ defaultCategory }) {
             style={{...S.btn,background:'#f3f4f6',color:'#374151',border:'1px solid #d1d5db',cursor:'pointer'}}>
             {selected.size===filtered.length&&selected.size>0?'전체 해제':'전체 선택'}
           </button>
+          <button onClick={()=>setShowDups(d=>!d)}
+            style={{...S.btn,cursor:'pointer',
+              background:showDups?'#7c3aed':'#f3f4f6',
+              color:showDups?'#fff':'#374151',
+              border:showDups?'none':'1px solid #d1d5db',
+              position:'relative'}}>
+            🔁 중복 체크
+            {dupRfids.length>0 && <span style={{position:'absolute',top:-6,right:-6,
+              background:'#ef4444',color:'#fff',borderRadius:'50%',
+              width:16,height:16,fontSize:10,fontWeight:700,
+              display:'flex',alignItems:'center',justifyContent:'center'}}>
+              {dupRfids.length}
+            </span>}
+          </button>
           <button onClick={downloadExcel} style={{...S.btn,background:'#16a34a',color:'#fff',border:'none'}}>
             ⬇ 엑셀 다운
           </button>
         </div>
       </div>
+      {/* 중복 RFID 패널 */}
+      {showDups && (
+        <div style={{background:'#fff',border:'1px solid #e5e7eb',borderRadius:8,padding:14}}>
+          <div style={{fontWeight:700,fontSize:13,color:'#111827',marginBottom:10}}>
+            🔁 중복 RFID {dupRfids.length > 0 ? `${dupRfids.length}건 발견` : '없음'}
+          </div>
+          {dupRfids.length === 0
+            ? <div style={{color:'#16a34a',fontSize:12}}>✓ 현재 필터 기준으로 중복된 RFID가 없습니다</div>
+            : dupRfids.map(([rfid, cnt]) => {
+              const recs = filtered.filter(r=>r.rfid===rfid)
+              return (
+                <div key={rfid} style={{background:'#fff5f5',border:'1px solid #fca5a5',borderRadius:6,padding:'8px 12px',marginBottom:6}}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
+                    <span style={{fontWeight:700,color:'#dc2626',fontSize:14}}>{rfid}</span>
+                    <span style={{background:'#dc2626',color:'#fff',borderRadius:10,padding:'1px 8px',fontSize:11,fontWeight:700}}>{cnt}회</span>
+                  </div>
+                  {recs.map((r,i)=>(
+                    <div key={i} style={{fontSize:11,color:'#6b7280',marginBottom:2}}>
+                      {r.round&&`${r.round} · `}{r.outDate||'-'} · {(Array.isArray(r.repairItems)?r.repairItems:[r.repairItem||'']).join(', ')}
+                    </div>
+                  ))}
+                </div>
+              )
+            })
+          }
+        </div>
+      )}
+
       {/* 필터 */}
       <div style={{display:'flex',gap:8,alignItems:'flex-start',flexWrap:'wrap'}}>
         <div style={{display:'flex',gap:5,flexWrap:'wrap',flex:1}}>
