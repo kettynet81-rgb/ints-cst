@@ -95,6 +95,23 @@ export default function RecallManage({ defaultCategory }) {
   const freeCount    = filtered.filter(r=>r.payType==='무상').length
   const pendingCount = filtered.filter(r=>!r.inDate).length
 
+
+  const normalizeItems = (raw) => {
+    if (!raw) return ['기타']
+    const r = raw.toUpperCase()
+    const items = []
+    if (r.includes('RFID') || r.includes('READ')) items.push('RFID 교체')
+    if (r.includes('반사판')) items.push('반사판 교체')
+    if (r.includes('CNT')) items.push('CNT 파손')
+    if (r.includes('견시창') || r.includes('HOLE')) items.push('견시창 교체')
+    if (r.includes('슬라이드')) items.push('슬라이드 교체')
+    if (r.includes('FRONT')) items.push('FRONT COVER 교체')
+    if (r.includes('ARM')) items.push('ARM 파손')
+    if (r.includes('볼트') || r.includes('BOLT')) items.push('볼트 파손/누락')
+    if (r.includes('찍힘') || r.includes('변형')) items.push('외관 찍힘/변형')
+    return items.length > 0 ? [...new Set(items)] : raw.split(/[,、]+/).map(s=>s.trim()).filter(Boolean) || ['기타']
+  }
+
   const setF = (k,v) => setForm(f=>({...f,[k]:v}))
   const toggleSel  = (id) => setSelected(s => { const n=new Set(s); n.has(id)?n.delete(id):n.add(id); return n })
   const selectAll  = () => setSelected(new Set(filtered.map(r=>r.id)))
@@ -172,7 +189,7 @@ export default function RecallManage({ defaultCategory }) {
       const rfid = String(row[iRfid]||'').trim().toUpperCase()
       if (!/^[A-Z]{3,4}\d{3,}$/.test(rfid)) continue
       const repairRaw = String(row[iRepair]||'').trim()
-      const repairItems = repairRaw.split(/[,、]+/).map(s=>s.trim()).filter(Boolean)
+      const repairItems = normalizeItems(repairRaw)
       items.push({
         rfid, repairItems,
         category: defaultCategory==='Repair' ? 'Repair' : '리콜',
