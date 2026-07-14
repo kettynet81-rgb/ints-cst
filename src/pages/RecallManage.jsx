@@ -62,6 +62,7 @@ export default function RecallManage({ defaultCategory }) {
   const [uploading,setUploading]= useState(false)
   const [selected, setSelected]  = useState(new Set())
   const [showDups, setShowDups]   = useState(false)
+  const [checkedDups, setCheckedDups] = useState(new Set())
 
   useEffect(() => {
     const q = query(collection(db,'recalls'), orderBy('createdAt','desc'))
@@ -322,14 +323,30 @@ export default function RecallManage({ defaultCategory }) {
             ? <div style={{color:'#16a34a',fontSize:12}}>✓ 현재 필터 기준으로 중복된 RFID가 없습니다</div>
             : dupRfids.map(([rfid, cnt]) => {
               const recs = filtered.filter(r=>r.rfid===rfid)
+              const isChecked = checkedDups.has(rfid)
               return (
-                <div key={rfid} style={{background:'#fff5f5',border:'1px solid #fca5a5',borderRadius:6,padding:'8px 12px',marginBottom:6}}>
+                <div key={rfid} style={{
+                  background: isChecked?'#f8fafc':'#fff5f5',
+                  border:`1px solid ${isChecked?'#e5e7eb':'#fca5a5'}`,
+                  borderRadius:6,padding:'8px 12px',marginBottom:6,
+                  opacity: isChecked?0.6:1
+                }}>
                   <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
-                    <span style={{fontWeight:700,color:'#dc2626',fontSize:14}}>{rfid}</span>
-                    <span style={{background:'#dc2626',color:'#fff',borderRadius:10,padding:'1px 8px',fontSize:11,fontWeight:700}}>{cnt}회</span>
+                    <span style={{fontWeight:700,color:isChecked?'#9ca3af':'#dc2626',fontSize:14,
+                      textDecoration:isChecked?'line-through':'none'}}>{rfid}</span>
+                    <div style={{display:'flex',gap:6,alignItems:'center'}}>
+                      <span style={{background:isChecked?'#e5e7eb':'#dc2626',color:isChecked?'#9ca3af':'#fff',
+                        borderRadius:10,padding:'1px 8px',fontSize:11,fontWeight:700}}>{cnt}회</span>
+                      <button onClick={()=>setCheckedDups(s=>{const n=new Set(s);n.has(rfid)?n.delete(rfid):n.add(rfid);return n})}
+                        style={{padding:'2px 8px',borderRadius:4,border:'1px solid',cursor:'pointer',fontSize:11,fontFamily:'inherit',
+                          background:isChecked?'#f3f4f6':'#1e40af',color:isChecked?'#6b7280':'#fff',
+                          borderColor:isChecked?'#d1d5db':'#1e40af'}}>
+                        {isChecked?'취소':'확인'}
+                      </button>
+                    </div>
                   </div>
                   {recs.map((r,i)=>(
-                    <div key={i} style={{fontSize:11,color:'#6b7280',marginBottom:2}}>
+                    <div key={i} style={{fontSize:11,color:isChecked?'#9ca3af':'#6b7280',marginBottom:2}}>
                       {r.round&&`${r.round} · `}{r.outDate||'-'} · {(Array.isArray(r.repairItems)?r.repairItems:[r.repairItem||'']).join(', ')}
                     </div>
                   ))}
