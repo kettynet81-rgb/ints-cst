@@ -14,6 +14,13 @@ const parseDate = (v) => {
   if (!v) return ''
   const year = new Date().getFullYear()
   v = String(v).trim().replace(/\./g,'/')
+  // MM/DD/YY 형식
+  const mdyShort = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/)
+  if (mdyShort) return `20${mdyShort[3]}-${mdyShort[1].padStart(2,'0')}-${mdyShort[2].padStart(2,'0')}`
+  // MM/DD/YYYY 형식
+  const mdyFull = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+  if (mdyFull) return `${mdyFull[3]}-${mdyFull[1].padStart(2,'0')}-${mdyFull[2].padStart(2,'0')}`
+  // MM/DD 형식
   const slash = v.match(/^(\d{1,2})\/(\d{1,2})$/)
   if (slash) return `${year}-${slash[1].padStart(2,'0')}-${slash[2].padStart(2,'0')}`
   const mmdd = v.match(/^(\d{2})(\d{2})$/)
@@ -26,6 +33,15 @@ const parseDate = (v) => {
     return local.toISOString().slice(0,10)
   }
   return v
+}
+
+const fmtDate = (v) => {
+  if (!v) return '-'
+  const parsed = parseDate(v)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(parsed)) {
+    return parsed.slice(2).replace(/-/g,'/')
+  }
+  return parsed
 }
 
 export default function RecallManage({ defaultCategory }) {
@@ -404,7 +420,7 @@ export default function RecallManage({ defaultCategory }) {
                     color:r.payType==='유상'?'#dc2626':'#2563eb'}}>{r.payType}</span>
                 </td>}
                 {defaultCategory==='Repair' && <td style={{...S.td,textAlign:'center',fontSize:12}}>{r.round}</td>}
-                <td style={{...S.td,textAlign:'center',fontSize:12}}>{r.outDate||'-'}</td>
+                <td style={{...S.td,textAlign:'center',fontSize:12}}>{fmtDate(r.outDate)}</td>
                 <td style={{...S.td,textAlign:'center'}}>
                   {r.inDate
                     ? <span style={{fontSize:12,color:'#16a34a',fontWeight:600}}>{r.inDate}</span>
