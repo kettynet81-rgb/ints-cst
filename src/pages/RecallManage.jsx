@@ -62,7 +62,7 @@ export default function RecallManage({ defaultCategory }) {
   const [uploading,setUploading]= useState(false)
   const [selected, setSelected]  = useState(new Set())
   const [showDups, setShowDups]   = useState(false)
-  const [checkedDups, setCheckedDups] = useState(new Set())
+  const [checkedDups, setCheckedDups] = useState(() => new Set(JSON.parse(localStorage.getItem('checkedDups_'+defaultCategory)||'[]')))
 
   useEffect(() => {
     const q = query(collection(db,'recalls'), orderBy('createdAt','desc'))
@@ -301,12 +301,13 @@ export default function RecallManage({ defaultCategory }) {
               border:showDups?'none':'1px solid #d1d5db',
               position:'relative'}}>
             🔁 중복 체크
-            {dupRfids.length>0 && <span style={{position:'absolute',top:-6,right:-6,
+            {dupRfids.filter(([rfid])=>!checkedDups.has(rfid)).length>0 && (
+            <span style={{position:'absolute',top:-6,right:-6,
               background:'#ef4444',color:'#fff',borderRadius:'50%',
               width:16,height:16,fontSize:10,fontWeight:700,
               display:'flex',alignItems:'center',justifyContent:'center'}}>
-              {dupRfids.length}
-            </span>}
+              {dupRfids.filter(([rfid])=>!checkedDups.has(rfid)).length}
+            </span>)}
           </button>
           <button onClick={downloadExcel} style={{...S.btn,background:'#16a34a',color:'#fff',border:'none'}}>
             ⬇ 엑셀 다운
@@ -337,7 +338,10 @@ export default function RecallManage({ defaultCategory }) {
                     <div style={{display:'flex',gap:6,alignItems:'center'}}>
                       <span style={{background:isChecked?'#e5e7eb':'#dc2626',color:isChecked?'#9ca3af':'#fff',
                         borderRadius:10,padding:'1px 8px',fontSize:11,fontWeight:700}}>{cnt}회</span>
-                      <button onClick={()=>setCheckedDups(s=>{const n=new Set(s);n.has(rfid)?n.delete(rfid):n.add(rfid);return n})}
+                      <button onClick={()=>setCheckedDups(s=>{
+                          const n=new Set(s);n.has(rfid)?n.delete(rfid):n.add(rfid);
+                          localStorage.setItem('checkedDups_'+defaultCategory, JSON.stringify([...n]));
+                          return n})}
                         style={{padding:'2px 8px',borderRadius:4,border:'1px solid',cursor:'pointer',fontSize:11,fontFamily:'inherit',
                           background:isChecked?'#f3f4f6':'#1e40af',color:isChecked?'#6b7280':'#fff',
                           borderColor:isChecked?'#d1d5db':'#1e40af'}}>
