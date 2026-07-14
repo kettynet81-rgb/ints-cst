@@ -44,6 +44,18 @@ const fmtDate = (v) => {
   return parsed
 }
 
+const ITEM_KEYWORDS = {
+  'RFID 교체':       ['RFID','READ'],
+  '반사판 교체':      ['반사판'],
+  'CNT 파손':        ['CNT'],
+  '견시창 교체':      ['견시창','HOLE'],
+  '슬라이드 교체':    ['슬라이드'],
+  'FRONT COVER 교체':['FRONT'],
+  'ARM 파손':        ['ARM'],
+  '볼트 파손/누락':   ['볼트','BOLT'],
+  '외관 찍힘/변형':   ['찍힘','변형'],
+}
+
 export default function RecallManage({ defaultCategory }) {
   const { userData } = useAuth()
   const [records, setRecords] = useState([])
@@ -121,18 +133,6 @@ export default function RecallManage({ defaultCategory }) {
   const pendingCount = filtered.filter(r=>!r.inDate).length
 
 
-
-  const ITEM_KEYWORDS = {
-    'RFID 교체':       ['RFID','READ'],
-    '반사판 교체':      ['반사판'],
-    'CNT 파손':        ['CNT'],
-    '견시창 교체':      ['견시창','HOLE'],
-    '슬라이드 교체':    ['슬라이드'],
-    'FRONT COVER 교체':['FRONT'],
-    'ARM 파손':        ['ARM'],
-    '볼트 파손/누락':   ['볼트','BOLT'],
-    '외관 찍힘/변형':   ['찍힘','변형'],
-  }
 
   const normalizeItems = (raw) => {
     if (!raw) return ['기타']
