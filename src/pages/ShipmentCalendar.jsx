@@ -310,8 +310,9 @@ export default function ShipmentCalendar({ transactions, stockMap = {} }) {
 
   // 날짜 하루 앞당기기 (잘못 들어간 데이터 수정)
   const shiftDatesForward = async () => {
-    const targets = transactions.filter(t => t.type==='출하계획' && t.isHeader)
-    if (!window.confirm(`출하계획 ${targets.length}건의 날짜를 전부 +1일 수정합니다.\n예: 2026-07-06 → 2026-07-07\n\n계속하시겠습니까?`)) return
+    const monthStr = `${year}-${String(month+1).padStart(2,'0')}`
+    const targets = transactions.filter(t => t.type==='출하계획' && t.isHeader && (t.date||'').startsWith(monthStr))
+    if (!window.confirm(`${year}년 ${month+1}월 출하계획 ${targets.length}건만 +1일 수정합니다.\n예: ${monthStr}-06 → ${monthStr}-07\n\n계속하시겠습니까?`)) return
     let count = 0
     for (const t of targets) {
       if (!t.date) continue
@@ -352,7 +353,8 @@ export default function ShipmentCalendar({ transactions, stockMap = {} }) {
       // Excel 시리얼 숫자
       if (typeof v === 'number' && v > 40000 && v < 60000) {
         const d = new Date(Math.round((v - 25569) * 86400 * 1000))
-        return d.toISOString().slice(0,10)
+        const local = new Date(d.getTime() + 9*60*60*1000)
+        return local.toISOString().slice(0,10)
       }
       return null
     }
