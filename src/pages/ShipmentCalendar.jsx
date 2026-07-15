@@ -362,7 +362,7 @@ export default function ShipmentCalendar({ transactions, stockMap = {} }) {
     const validSheets = wb.SheetNames.filter(s => !s.includes('신규'))
     validSheets.forEach(sname => {
       const ws = wb.Sheets[sname]
-      const rows = XLSX.utils.sheet_to_json(ws, { header:1, raw:true, defval:null })
+      const rows = XLSX.utils.sheet_to_json(ws, { header:1, raw:true, defval:null, UTC:false })
       let currentDates = []
 
       rows.forEach(row => {
