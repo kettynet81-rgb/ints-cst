@@ -37,11 +37,16 @@ const parseDate = (v) => {
 
 const fmtDate = (v) => {
   if (!v) return '-'
-  const parsed = parseDate(v)
-  if (/^\d{4}-\d{2}-\d{2}$/.test(parsed)) {
-    return parsed.slice(2).replace(/-/g,'/')
+  const s = String(v).trim()
+  // YYYY-MM-DD → YY/MM/DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s.slice(2).replace(/-/g,'/')
+  // MM/DD/YY or MM/DD/YYYY → YY/MM/DD
+  const mdy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/)
+  if (mdy) {
+    const yy = mdy[3].length===4 ? mdy[3].slice(2) : mdy[3]
+    return `${yy}/${mdy[1].padStart(2,'0')}/${mdy[2].padStart(2,'0')}`
   }
-  return parsed
+  return s
 }
 
 const ITEM_KEYWORDS = {
@@ -442,9 +447,9 @@ export default function RecallManage({ defaultCategory }) {
                 </td>}
                 {defaultCategory==='Repair' && <td style={{...S.td,textAlign:'center',fontSize:12}}>{r.round}</td>}
                 <td style={{...S.td,textAlign:'center',fontSize:12}}>{fmtDate(r.outDate)}</td>
-                <td style={{...S.td,textAlign:'center'}}>
+                <td style={{...S.td,textAlign:'center'}}> 
                   {r.inDate
-                    ? <span style={{fontSize:12,color:'#16a34a',fontWeight:600}}>{r.inDate}</span>
+                    ? <span style={{fontSize:12,color:'#16a34a',fontWeight:600}}>{fmtDate(r.inDate)}</span>
                     : <input placeholder="반입일 입력" style={S.inlineInp}
                         onBlur={e=>e.target.value&&setInDate(r,parseDate(e.target.value))}
                         onKeyDown={e=>e.key==='Enter'&&e.target.value&&setInDate(r,parseDate(e.target.value))}/>
