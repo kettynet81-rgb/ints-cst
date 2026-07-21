@@ -60,7 +60,9 @@ export default function CertConverter({ isMobile }) {
           const eCell = row.getCell(5)
           const fCell = row.getCell(6)
           eCell.value = rfid
+          eCell.fill = { type: 'pattern', pattern: 'none' }
           fCell.value = rfid
+          fCell.fill = { type: 'pattern', pattern: 'none' }
           row.commit()
         }
       })
