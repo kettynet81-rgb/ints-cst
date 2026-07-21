@@ -12,6 +12,7 @@ import RecallManage from './pages/RecallManage'
 import AdminDelete from './pages/AdminDelete'
 import ProcessingManage from './pages/ProcessingManage'
 import ShipmentCalendar from './pages/ShipmentCalendar'
+import CertConverter from './pages/CertConverter'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import PendingPage from './pages/PendingPage'
@@ -68,6 +69,7 @@ function MainApp() {
     { id:'recall',    icon:'🔧', label:'리콜',        group:'조립팀' },
     { id:'repair',    icon:'🛠', label:'Repair',       group:'조립팀' },
     { id:'processing', icon:'🔩', label:'가공 현황',  group:'가공팀' },
+    { id:'certconv',   icon:'📋', label:'CST성적서 데이터 변환', group:'가공팀' },
     ...(userRole==='admin' ? [{ id:'admin', icon:'◉', label:'사용자 관리', group:'시스템' }] : []),
   ]
 
@@ -173,6 +175,7 @@ function MainApp() {
             : page==='shipment'  ? <ShipmentManage transactions={transactions} stockMap={stockMap} onNavigate={setPage}/>
             : page==='history'   ? <History transactions={transactions} />
             : page==='processing'? <ProcessingManage stockMap={stockMap}/>
+            : page==='certconv'  ? <CertConverter isMobile={isMobile}/>
             : page==='admindel'  ? <AdminDelete/>
             : page==='recall'    ? <RecallManage key='recall' defaultCategory='리콜'/>
             : page==='repair'    ? <RecallManage key='repair' defaultCategory='Repair'/>
