@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import * as XLSX from 'xlsx'
+
 
 function parseRfid(text) {
   const map = {}
@@ -18,7 +18,7 @@ export default function CertConverter({ isMobile }) {
   const [rfidList, setRfidList]   = useState([])
   const [error, setError]         = useState('')
   const [loading, setLoading]     = useState(false)
-  const [adding, setAdding]       = useState(false) // 추가 입력 모드
+  const [adding, setAdding]       = useState(false)
 
   const handleParse = useCallback(() => {
     setError('')
@@ -27,7 +27,6 @@ export default function CertConverter({ isMobile }) {
     if (list.length === 0) { setError('RFID 코드를 인식하지 못했습니다.'); return }
 
     if (adding && rfidList.length > 0) {
-      // 기존 목록에 이어붙이기 (중복 no 제거, 재정렬)
       const merged = [...rfidList]
       for (const item of list) {
         if (!merged.find(r => r.no === item.no)) merged.push(item)
@@ -47,18 +46,33 @@ export default function CertConverter({ isMobile }) {
     try {
       const res = await fetch('/cert-template.xlsx')
       const buf = await res.arrayBuffer()
-      const wb  = XLSX.read(buf, { type: 'array', cellStyles: true })
-      const ws  = wb.Sheets[wb.SheetNames[0]]
+
+      const { default: ExcelJS } = await import('exceljs')
+      const wb = new ExcelJS.Workbook()
+      await wb.xlsx.load(buf)
+      const ws = wb.worksheets[0]
 
       rfidList.forEach(({ rfid }, i) => {
         const startRow = i * 42 + 2
         for (let r = startRow; r < startRow + 42; r++) {
-          ws[`E${r}`] = { t: 's', v: rfid }
-          ws[`F${r}`] = { t: 's', v: rfid }
+          const row = ws.getRow(r)
+          // 기존 셀 서식 그대로 유지하면서 값만 변경
+          const eCell = row.getCell(5)
+          const fCell = row.getCell(6)
+          eCell.value = rfid
+          fCell.value = rfid
+          row.commit()
         }
       })
 
-      XLSX.writeFile(wb, 'INTS-원자재_협력업체_데이터.xlsx')
+      const outBuf = await wb.xlsx.writeBuffer()
+      const blob = new Blob([outBuf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'INTS-원자재_협력업체_데이터.xlsx'
+      a.click()
+      URL.revokeObjectURL(url)
     } catch (e) {
       setError('파일 생성 중 오류: ' + e.message)
     } finally {
@@ -93,11 +107,10 @@ export default function CertConverter({ isMobile }) {
       <div style={S.title}>CST성적서 데이터 변환</div>
       <div style={S.sub}>RFID 표를 붙여넣으면 원본 서식 그대로 E·F열(Lot No)이 채워진 Excel을 생성합니다.</div>
 
-      {/* 입력 영역 - 처음이거나 추가 모드일 때 표시 */}
       {showInput && (
         <>
           {adding && (
-            <div style={{ ...S.infoBox, borderColor: '#0f766e', background: '#f0fdf4', color: '#166534', marginBottom: 10 }}>
+            <div style={{ ...S.infoBox, borderColor: '#0f766e', background: '#f0fdf4', color: '#166534' }}>
               ✚ 추가 입력 모드 — 기존 {rfidList.length}개에 이어서 붙여넣으세요.
             </div>
           )}
@@ -130,53 +143,48 @@ export default function CertConverter({ isMobile }) {
         </>
       )}
 
-      {/* 파싱된 목록 */}
       {rfidList.length > 0 && !adding && (
-        <>
-          <div style={S.infoBox}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
-                총 {rfidList.length}EA · {rfidList.length * 42}행
-              </span>
-            </div>
-            <div style={S.tblWrap}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-                <thead>
-                  <tr style={{ background: '#f1f5f9', position: 'sticky', top: 0 }}>
-                    {['No.', 'RFID', '행 범위'].map(h => (
-                      <th key={h} style={{ padding: '5px 10px', border: '1px solid #e2e8f0', textAlign: 'center', fontWeight: 700, color: '#374151' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {rfidList.map(({ no, rfid }, i) => (
-                    <tr key={no} style={{ background: i % 2 === 0 ? '#fff' : '#f8fafc' }}>
-                      <td style={{ padding: '4px 10px', border: '1px solid #e2e8f0', textAlign: 'center' }}>{no}</td>
-                      <td style={{ padding: '4px 10px', border: '1px solid #e2e8f0', fontFamily: 'monospace' }}>{rfid}</td>
-                      <td style={{ padding: '4px 10px', border: '1px solid #e2e8f0', textAlign: 'center', color: '#64748b' }}>
-                        {i * 42 + 2} ~ {(i + 1) * 42 + 1}행
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {error && <div style={{ ...S.err, marginBottom: 10 }}>{error}</div>}
-
-            <div style={S.btnRow}>
-              <button style={S.btnDl} onClick={handleDownload} disabled={loading}>
-                {loading ? '⏳ 생성 중...' : '↓ Excel 다운로드'}
-              </button>
-              <button style={S.btnAdd} onClick={() => { setAdding(true); setError('') }}>
-                ✚ 데이터 추가
-              </button>
-              <button style={S.btnReset} onClick={handleReset}>
-                초기화
-              </button>
-            </div>
+        <div style={S.infoBox}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
+              총 {rfidList.length}EA · {rfidList.length * 42}행
+            </span>
           </div>
-        </>
+          <div style={S.tblWrap}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ background: '#f1f5f9', position: 'sticky', top: 0 }}>
+                  {['No.', 'RFID', '행 범위'].map(h => (
+                    <th key={h} style={{ padding: '5px 10px', border: '1px solid #e2e8f0', textAlign: 'center', fontWeight: 700, color: '#374151' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rfidList.map(({ no, rfid }, i) => (
+                  <tr key={no} style={{ background: i % 2 === 0 ? '#fff' : '#f8fafc' }}>
+                    <td style={{ padding: '4px 10px', border: '1px solid #e2e8f0', textAlign: 'center' }}>{no}</td>
+                    <td style={{ padding: '4px 10px', border: '1px solid #e2e8f0', fontFamily: 'monospace' }}>{rfid}</td>
+                    <td style={{ padding: '4px 10px', border: '1px solid #e2e8f0', textAlign: 'center', color: '#64748b' }}>
+                      {i * 42 + 2} ~ {(i + 1) * 42 + 1}행
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {error && <div style={{ ...S.err, marginBottom: 10 }}>{error}</div>}
+          <div style={S.btnRow}>
+            <button style={S.btnDl} onClick={handleDownload} disabled={loading}>
+              {loading ? '⏳ 생성 중...' : '↓ Excel 다운로드'}
+            </button>
+            <button style={S.btnAdd} onClick={() => { setAdding(true); setError('') }}>
+              ✚ 데이터 추가
+            </button>
+            <button style={S.btnReset} onClick={handleReset}>
+              초기화
+            </button>
+          </div>
+        </div>
       )}
     </div>
   )
