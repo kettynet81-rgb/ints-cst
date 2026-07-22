@@ -164,13 +164,13 @@ export default function AdminPage() {
   const rollbackToday = async () => {
     const today = new Date()
     today.setHours(0,0,0,0)
-    const snap = await getDocs(query(collection(db,'transactions'),
-      where('type','==','출고'),
-      where('createdAt','>=', Timestamp.fromDate(today))
-    ))
+    const todayTs = today.getTime()
+    const snap = await getDocs(collection(db,'transactions'))
     if (snap.empty) { alert('오늘 생성된 출고기록 없습니다'); return }
 
-    const list = snap.docs.map(d=>({id:d.id,...d.data()}))
+    const list = snap.docs
+      .map(d=>({id:d.id,...d.data()}))
+      .filter(d => d.type==='출고' && d.createdAt?.toDate?.()?.getTime() >= todayTs)
     const msg = list.slice(0,10).map(d=>`${d.date} ${d.itemCode} -${d.quantity}`).join('\n')
     if (!window.confirm(`오늘 생성된 출고기록 ${list.length}건 삭제:\n${msg}\n${list.length>10?'...(외 '+(list.length-10)+'건)':''}\n\n삭제하면 재고가 복구됩니다. 계속하시겠습니까?`)) return
 
