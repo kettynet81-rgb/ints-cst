@@ -164,22 +164,12 @@ export default function ShipmentCalendar({ transactions, stockMap = {} }) {
   }
 
   const confirmShipment = async (plan) => {
-    const today = new Date()
-    const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`
-    const isPast = plan.date < todayStr
-    let deductStock = !isPast
+    const deductStock = window.confirm(
+      `📦 ${plan.date} / ${plan.setQty}EA 출하 확정
 
-    if (isPast) {
-      if (!window.confirm(`📅 ${plan.date} 과거 출하건\n재고 차감 없이 확정 처리됩니다.\n\n확정하시겠습니까?`)) return
-    } else {
-      const short = ITEMS.filter(i => (stockMap[i.code]||0) < i.needPerSet * plan.setQty)
-      if (short.length > 0) {
-        const ok = window.confirm(`⚠ 재고 부족 ${short.length}품목\n${short.slice(0,5).map(i=>`${i.code} (${i.needPerSet*plan.setQty-(stockMap[i.code]||0)}개 부족)`).join('\n')}\n\n그래도 출하 확정하시겠습니까?`)
-        if (!ok) return
-      } else {
-        if (!window.confirm(`${plan.date} / ${plan.setQty}EA 출하 확정하시겠습니까?\n재고에서 자동 차감됩니다.`)) return
-      }
-    }
+[확인] 재고 차감 O
+[취소] 재고 차감 X`
+    )
     const batch = writeBatch(db)
     if (deductStock) for (const item of ITEMS) {
       batch.set(doc(collection(db,'transactions')), {
