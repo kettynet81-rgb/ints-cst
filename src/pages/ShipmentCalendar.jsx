@@ -144,6 +144,25 @@ export default function ShipmentCalendar({ transactions, stockMap = {} }) {
     await updateDoc(doc(db,'transactions',plan.id), { acknowledged: true })
   }
 
+
+  const onDragStart = (e, plan) => {
+    setDragPlan(plan)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+  const onDragOver = (e, date) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setDragOver(date)
+  }
+  const onDrop = async (e, targetDate) => {
+    e.preventDefault()
+    setDragOver(null)
+    if (!dragPlan || dragPlan.date === targetDate) { setDragPlan(null); return }
+    if (!window.confirm(`${dragPlan.date} → ${targetDate}\n날짜를 변경하시겠습니까?`)) { setDragPlan(null); return }
+    await updateDoc(doc(db,'transactions',dragPlan.id), { date: targetDate })
+    setDragPlan(null)
+  }
+
   const confirmShipment = async (plan) => {
     const today = new Date()
     const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`
