@@ -57,6 +57,57 @@ export default function AdminPage() {
   }
 
 
+
+  // 7/8→7/7, 7/10→7/9 날짜 수정 + 출고기록 없으면 재생성
+  const fixShipmentDates = async () => {
+    if (!window.confirm('7/8 계획 3건→7/7, 7/10 계획 2건→7/9 수정하고\n출고기록 없는 건 재생성합니다.\n\n계속하시겠습니까?')) return
+
+    const { ITEMS } = await import('../data/items')
+    const { collection: col2, getDocs: gd2, query: q2, where: w2, writeBatch: wb2, doc: d2, serverTimestamp: st2 } = await import('firebase/firestore')
+
+    const dateMap = { '2026-07-08': '2026-07-07', '2026-07-10': '2026-07-09' }
+    let fixed = 0, created = 0
+
+    for (const [oldDate, newDate] of Object.entries(dateMap)) {
+      // 출하계획 찾기
+      const planSnap = await gd2(q2(col2(db,'transactions'), w2('type','==','출하계획'), w2('date','==',oldDate), w2('isHeader','==',true)))
+      for (const planDoc of planSnap.docs) {
+        const plan = { id: planDoc.id, ...planDoc.data() }
+        // 날짜 수정
+        const batch = wb2(db)
+        batch.update(d2(db,'transactions',plan.id), { date: newDate })
+
+        // 관련 자식 레코드도 수정
+        const childSnap = await gd2(q2(col2(db,'transactions'), w2('shipmentId','==',plan.shipmentId), w2('type','==','출하계획')))
+        childSnap.docs.filter(d=>!d.data().isHeader).forEach(d => batch.update(d2(db,'transactions',d.id), { date: newDate }))
+
+        // 출고기록 있는지 확인
+        const outSnap = await gd2(q2(col2(db,'transactions'), w2('shipmentId','==',plan.shipmentId), w2('type','==','출고')))
+
+        // 출고기록 없으면 생성
+        if (outSnap.empty && plan.setQty) {
+          for (const item of ITEMS) {
+            batch.set(d2(col2(db,'transactions')), {
+              type:'출고', itemCode:item.code, itemName:item.name,
+              quantity: item.needPerSet * plan.setQty,
+              date: newDate, shipmentId: plan.shipmentId,
+              memo: `제품출하 ${plan.setQty}SET (날짜수정)`,
+              createdAt: st2()
+            })
+            created++
+          }
+        } else {
+          // 출고기록 날짜도 수정
+          outSnap.docs.forEach(d => batch.update(d2(db,'transactions',d.id), { date: newDate }))
+        }
+
+        await batch.commit()
+        fixed++
+      }
+    }
+    alert(`완료: 계획 ${fixed}건 날짜 수정, 출고기록 ${created}개 생성`)
+  }
+
   // 이상 날짜 조회
   const findBadDates = async () => {
     const snap = await getDocs(collection(db,'transactions'))
@@ -198,6 +249,18 @@ export default function AdminPage() {
         <div style={{padding:'8px 16px',borderTop:'1px solid #f3f4f6',fontSize:11,color:'#9ca3af'}}>
           파란색 = 자사가공 · 회색 = 외주가공
         </div>
+      </div>
+
+      {/* 7/8→7/7, 7/10→7/9 날짜 수정 */}
+      <div style={{marginBottom:12,padding:'12px 14px',background:'#fef3c7',border:'1px solid #fde68a',borderRadius:8,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div>
+          <div style={{fontSize:13,fontWeight:700,color:'#92400e'}}>🔧 출하 날짜 수정 (7/8→7/7, 7/10→7/9)</div>
+          <div style={{fontSize:11,color:'#a16207',marginTop:2}}>날짜 수정 + 출고기록 없으면 재생성 (재고 차감)</div>
+        </div>
+        <button onClick={fixShipmentDates}
+          style={{padding:'7px 14px',background:'#d97706',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:'inherit'}}>
+          수정 실행
+        </button>
       </div>
 
       {/* 이상 날짜 조회 */}
