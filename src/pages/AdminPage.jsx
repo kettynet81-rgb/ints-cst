@@ -56,6 +56,20 @@ export default function AdminPage() {
     setProcessing(p => ({...p, [code]: next}))
   }
 
+
+  // 이상 날짜 조회
+  const findBadDates = async () => {
+    const snap = await getDocs(collection(db,'transactions'))
+    const bad = snap.docs
+      .map(d => ({id:d.id,...d.data()}))
+      .filter(d => d.type==='출하계획' && d.isHeader && d.date && !/^\d{4}-\d{2}-\d{2}$/.test(d.date))
+    if (bad.length === 0) {
+      alert('이상한 날짜 데이터 없습니다!')
+      return
+    }
+    alert('이상 날짜 발견:\n' + bad.map(d=>`${d.date} (${d.setQty||'?'}EA)`).join('\n'))
+  }
+
   // 공휴일 추가/삭제
   const addHoliday = async () => {
     if (!hForm.date || !hForm.name.trim()) return
@@ -184,6 +198,18 @@ export default function AdminPage() {
         <div style={{padding:'8px 16px',borderTop:'1px solid #f3f4f6',fontSize:11,color:'#9ca3af'}}>
           파란색 = 자사가공 · 회색 = 외주가공
         </div>
+      </div>
+
+      {/* 이상 날짜 조회 */}
+      <div style={{marginBottom:12,padding:'12px 14px',background:'#f0f9ff',border:'1px solid #bae6fd',borderRadius:8,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div>
+          <div style={{fontSize:13,fontWeight:700,color:'#0369a1'}}>🔍 출하계획 이상 날짜 조회</div>
+          <div style={{fontSize:11,color:'#0284c7',marginTop:2}}>형식이 잘못된 날짜 데이터 찾기</div>
+        </div>
+        <button onClick={findBadDates}
+          style={{padding:'7px 14px',background:'#0284c7',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:'inherit'}}>
+          조회
+        </button>
       </div>
 
       {/* 공휴일 관리 */}
