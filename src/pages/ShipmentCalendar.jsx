@@ -145,6 +145,31 @@ export default function ShipmentCalendar({ transactions, stockMap = {} }) {
   }
 
 
+
+  const moveConfirmedDate = async (plan, newDate) => {
+    if (!window.confirm(`✅ 확정된 출하 날짜 변경\n${plan.date} → ${newDate}\n\n출고기록도 함께 이동됩니다.\n재고 수량은 변동 없습니다.\n\n계속하시겠습니까?`)) return
+
+    const { getDocs:gd2, query:q2, where:w2 } = await import('firebase/firestore')
+    const batch = writeBatch(db)
+
+    // 1. 계획 날짜 변경
+    batch.update(doc(db,'transactions',plan.id), { date: newDate })
+
+    // 2. 자식 계획 날짜 변경
+    const childSnap = await gd2(q2(collection(db,'transactions'),
+      w2('shipmentId','==',plan.shipmentId), w2('type','==','출하계획')))
+    childSnap.docs.filter(d=>!d.data().isHeader).forEach(d =>
+      batch.update(doc(db,'transactions',d.id), { date: newDate }))
+
+    // 3. 출고기록 날짜 변경
+    const outSnap = await gd2(q2(collection(db,'transactions'),
+      w2('shipmentId','==',plan.shipmentId), w2('type','==','출고')))
+    outSnap.docs.forEach(d => batch.update(doc(db,'transactions',d.id), { date: newDate }))
+
+    await batch.commit()
+    alert(`완료: ${plan.date} → ${newDate} (출고기록 ${outSnap.docs.length}건 이동)`)
+  }
+
   const onDragStart = (e, plan) => {
     setDragPlan(plan)
     e.dataTransfer.effectAllowed = 'move'
@@ -158,8 +183,12 @@ export default function ShipmentCalendar({ transactions, stockMap = {} }) {
     e.preventDefault()
     setDragOver(null)
     if (!dragPlan || dragPlan.date === targetDate) { setDragPlan(null); return }
-    if (!window.confirm(`${dragPlan.date} → ${targetDate}\n날짜를 변경하시겠습니까?`)) { setDragPlan(null); return }
-    await updateDoc(doc(db,'transactions',dragPlan.id), { date: targetDate })
+    if (dragPlan.status === 'confirmed') {
+      await moveConfirmedDate(dragPlan, targetDate)
+    } else {
+      if (!window.confirm(`${dragPlan.date} → ${targetDate}\n날짜를 변경하시겠습니까?`)) { setDragPlan(null); return }
+      await updateDoc(doc(db,'transactions',dragPlan.id), { date: targetDate })
+    }
     setDragPlan(null)
   }
 
