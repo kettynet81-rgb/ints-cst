@@ -108,6 +108,45 @@ export default function AdminPage() {
     alert(`완료: 계획 ${fixed}건 날짜 수정, 출고기록 ${created}개 생성`)
   }
 
+
+  // 확정됐는데 출고기록 없는 건 찾아서 재생성
+  const fixMissingOutbound = async () => {
+    const { ITEMS } = await import('../data/items')
+    const { collection:col2, getDocs:gd2, query:q2, where:w2, writeBatch:wb2, doc:d2, serverTimestamp:st2 } = await import('firebase/firestore')
+
+    // 확정된 출하계획 전체
+    const planSnap = await gd2(q2(col2(db,'transactions'), w2('type','==','출하계획'), w2('status','==','confirmed'), w2('isHeader','==',true)))
+    const missing = []
+
+    for (const planDoc of planSnap.docs) {
+      const plan = { id: planDoc.id, ...planDoc.data() }
+      const outSnap = await gd2(q2(col2(db,'transactions'), w2('shipmentId','==',plan.shipmentId), w2('type','==','출고')))
+      if (outSnap.empty) missing.push(plan)
+    }
+
+    if (missing.length === 0) { alert('출고기록 누락 없습니다!'); return }
+
+    const msg = missing.map(p=>`${p.date} / ${p.setQty}EA`).join('\n')
+    if (!window.confirm(`출고기록 없는 확정 건 ${missing.length}개:\n${msg}\n\n출고기록 생성(재고 차감)하시겠습니까?`)) return
+
+    let count = 0
+    for (const plan of missing) {
+      const batch = wb2(db)
+      for (const item of ITEMS) {
+        batch.set(d2(col2(db,'transactions')), {
+          type:'출고', itemCode:item.code, itemName:item.name,
+          quantity: item.needPerSet * plan.setQty,
+          date: plan.date, shipmentId: plan.shipmentId,
+          memo: `제품출하 ${plan.setQty}SET (누락재생성)`,
+          createdAt: st2()
+        })
+        count++
+      }
+      await batch.commit()
+    }
+    alert(`완료: 출고기록 ${count}개 생성 (재고 차감 완료)`)
+  }
+
   // 이상 날짜 조회
   const findBadDates = async () => {
     const snap = await getDocs(collection(db,'transactions'))
@@ -260,6 +299,18 @@ export default function AdminPage() {
         <button onClick={fixShipmentDates}
           style={{padding:'7px 14px',background:'#d97706',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:'inherit'}}>
           수정 실행
+        </button>
+      </div>
+
+      {/* 확정됐는데 출고기록 없는 건 복구 */}
+      <div style={{marginBottom:12,padding:'12px 14px',background:'#fee2e2',border:'1px solid #fca5a5',borderRadius:8,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div>
+          <div style={{fontSize:13,fontWeight:700,color:'#991b1b'}}>🚨 출고기록 누락 복구 (재고 차감)</div>
+          <div style={{fontSize:11,color:'#b91c1c',marginTop:2}}>확정됐는데 출고기록 없는 건 찾아서 재고 차감</div>
+        </div>
+        <button onClick={fixMissingOutbound}
+          style={{padding:'7px 14px',background:'#dc2626',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:'inherit'}}>
+          조회 및 복구
         </button>
       </div>
 
