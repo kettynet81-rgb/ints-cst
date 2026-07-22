@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { db } from "../firebase"
 import { collection, onSnapshot, doc, updateDoc, getDocs, writeBatch,
-         query, where, addDoc, deleteDoc, orderBy, serverTimestamp } from "firebase/firestore"
+         query, where, addDoc, deleteDoc, orderBy, serverTimestamp, Timestamp } from "firebase/firestore"
 import { useAuth } from "../contexts/AuthContext"
 import { ITEMS } from "../data/items"
 
@@ -63,42 +63,41 @@ export default function AdminPage() {
     if (!window.confirm('7/8 계획 3건→7/7, 7/10 계획 2건→7/9 수정하고\n출고기록 없는 건 재생성합니다.\n\n계속하시겠습니까?')) return
 
     const { ITEMS } = await import('../data/items')
-    const { collection: col2, getDocs: gd2, query: q2, where: w2, writeBatch: wb2, doc: d2, serverTimestamp: st2 } = await import('firebase/firestore')
 
     const dateMap = { '2026-07-08': '2026-07-07', '2026-07-10': '2026-07-09' }
     let fixed = 0, created = 0
 
     for (const [oldDate, newDate] of Object.entries(dateMap)) {
       // 출하계획 찾기
-      const planSnap = await gd2(q2(col2(db,'transactions'), w2('type','==','출하계획'), w2('date','==',oldDate), w2('isHeader','==',true)))
+      const planSnap = await getDocs(q2(collection(db,'transactions'), where('type','==','출하계획'), where('date','==',oldDate), where('isHeader','==',true)))
       for (const planDoc of planSnap.docs) {
         const plan = { id: planDoc.id, ...planDoc.data() }
         // 날짜 수정
-        const batch = wb2(db)
-        batch.update(d2(db,'transactions',plan.id), { date: newDate })
+        const batch = writeBatch(db)
+        batch.update(doc(db,'transactions',plan.id), { date: newDate })
 
         // 관련 자식 레코드도 수정
-        const childSnap = await gd2(q2(col2(db,'transactions'), w2('shipmentId','==',plan.shipmentId), w2('type','==','출하계획')))
-        childSnap.docs.filter(d=>!d.data().isHeader).forEach(d => batch.update(d2(db,'transactions',d.id), { date: newDate }))
+        const childSnap = await getDocs(q2(collection(db,'transactions'), where('shipmentId','==',plan.shipmentId), where('type','==','출하계획')))
+        childSnap.docs.filter(d=>!d.data().isHeader).forEach(d => batch.update(doc(db,'transactions',d.id), { date: newDate }))
 
         // 출고기록 있는지 확인
-        const outSnap = await gd2(q2(col2(db,'transactions'), w2('shipmentId','==',plan.shipmentId), w2('type','==','출고')))
+        const outSnap = await getDocs(q2(collection(db,'transactions'), where('shipmentId','==',plan.shipmentId), where('type','==','출고')))
 
         // 출고기록 없으면 생성
         if (outSnap.empty && plan.setQty) {
           for (const item of ITEMS) {
-            batch.set(d2(col2(db,'transactions')), {
+            batch.set(d2(collection(db,'transactions')), {
               type:'출고', itemCode:item.code, itemName:item.name,
               quantity: item.needPerSet * plan.setQty,
               date: newDate, shipmentId: plan.shipmentId,
               memo: `제품출하 ${plan.setQty}SET (날짜수정)`,
-              createdAt: st2()
+              createdAt: serverTimestamp()
             })
             created++
           }
         } else {
           // 출고기록 날짜도 수정
-          outSnap.docs.forEach(d => batch.update(d2(db,'transactions',d.id), { date: newDate }))
+          outSnap.docs.forEach(d => batch.update(doc(db,'transactions',d.id), { date: newDate }))
         }
 
         await batch.commit()
@@ -115,12 +114,12 @@ export default function AdminPage() {
     const { collection:col2, getDocs:gd2, query:q2, where:w2, writeBatch:wb2, doc:d2, serverTimestamp:st2 } = await import('firebase/firestore')
 
     // 확정된 출하계획 전체
-    const planSnap = await gd2(q2(col2(db,'transactions'), w2('type','==','출하계획'), w2('status','==','confirmed'), w2('isHeader','==',true)))
+    const planSnap = await getDocs(q2(collection(db,'transactions'), where('type','==','출하계획'), where('status','==','confirmed'), where('isHeader','==',true)))
     const missing = []
 
     for (const planDoc of planSnap.docs) {
       const plan = { id: planDoc.id, ...planDoc.data() }
-      const outSnap = await gd2(q2(col2(db,'transactions'), w2('shipmentId','==',plan.shipmentId), w2('type','==','출고')))
+      const outSnap = await getDocs(q2(collection(db,'transactions'), where('shipmentId','==',plan.shipmentId), where('type','==','출고')))
       if (outSnap.empty) missing.push(plan)
     }
 
@@ -131,14 +130,14 @@ export default function AdminPage() {
 
     let count = 0
     for (const plan of missing) {
-      const batch = wb2(db)
+      const batch = writeBatch(db)
       for (const item of ITEMS) {
-        batch.set(d2(col2(db,'transactions')), {
+        batch.set(d2(collection(db,'transactions')), {
           type:'출고', itemCode:item.code, itemName:item.name,
           quantity: item.needPerSet * plan.setQty,
           date: plan.date, shipmentId: plan.shipmentId,
           memo: `제품출하 ${plan.setQty}SET (누락재생성)`,
-          createdAt: st2()
+          createdAt: serverTimestamp()
         })
         count++
       }
@@ -163,12 +162,11 @@ export default function AdminPage() {
 
   // 오늘 생성된 출고기록 롤백
   const rollbackToday = async () => {
-    const { getDocs:gd2, query:q2, where:w2, Timestamp } = await import('firebase/firestore')
     const today = new Date()
     today.setHours(0,0,0,0)
-    const snap = await gd2(q2(collection(db,'transactions'),
-      w2('type','==','출고'),
-      w2('createdAt','>=', Timestamp.fromDate(today))
+    const snap = await getDocs(query(collection(db,'transactions'),
+      where('type','==','출고'),
+      where('createdAt','>=', Timestamp.fromDate(today))
     ))
     if (snap.empty) { alert('오늘 생성된 출고기록 없습니다'); return }
 
