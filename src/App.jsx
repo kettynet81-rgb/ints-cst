@@ -38,7 +38,15 @@ function MainApp() {
     if (!currentUser) return
     const q = query(collection(db, 'transactions'), orderBy('date', 'desc'))
     return onSnapshot(q, snap => {
-      setTransactions(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+      setTransactions(snap.docs.map(d => {
+        const data = d.data()
+        // 날짜 정규화 (2026-7-9 → 2026-07-09)
+        if (data.date) {
+          const parts = data.date.split('-')
+          if (parts.length === 3) data.date = `${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`
+        }
+        return { id: d.id, ...data }
+      }))
       setLoading(false)
     })
   }, [currentUser])
