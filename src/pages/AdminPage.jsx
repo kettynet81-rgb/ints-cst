@@ -160,6 +160,28 @@ export default function AdminPage() {
     alert('이상 날짜 발견:\n' + bad.map(d=>`${d.date} (${d.setQty||'?'}EA)`).join('\n'))
   }
 
+
+  // 오늘 생성된 출고기록 롤백
+  const rollbackToday = async () => {
+    const { getDocs:gd2, query:q2, where:w2, Timestamp } = await import('firebase/firestore')
+    const today = new Date()
+    today.setHours(0,0,0,0)
+    const snap = await gd2(q2(collection(db,'transactions'),
+      w2('type','==','출고'),
+      w2('createdAt','>=', Timestamp.fromDate(today))
+    ))
+    if (snap.empty) { alert('오늘 생성된 출고기록 없습니다'); return }
+
+    const list = snap.docs.map(d=>({id:d.id,...d.data()}))
+    const msg = list.slice(0,10).map(d=>`${d.date} ${d.itemCode} -${d.quantity}`).join('\n')
+    if (!window.confirm(`오늘 생성된 출고기록 ${list.length}건 삭제:\n${msg}\n${list.length>10?'...(외 '+(list.length-10)+'건)':''}\n\n삭제하면 재고가 복구됩니다. 계속하시겠습니까?`)) return
+
+    const batch = writeBatch(db)
+    list.forEach(d => batch.delete(doc(db,'transactions',d.id)))
+    await batch.commit()
+    alert(`${list.length}건 삭제 완료 - 재고 복구됨`)
+  }
+
   // 공휴일 추가/삭제
   const addHoliday = async () => {
     if (!hForm.date || !hForm.name.trim()) return
@@ -311,6 +333,18 @@ export default function AdminPage() {
         <button onClick={fixMissingOutbound}
           style={{padding:'7px 14px',background:'#dc2626',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:'inherit'}}>
           조회 및 복구
+        </button>
+      </div>
+
+      {/* 오늘 출고기록 롤백 */}
+      <div style={{marginBottom:12,padding:'12px 14px',background:'#fef3c7',border:'1px solid #fde68a',borderRadius:8,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div>
+          <div style={{fontSize:13,fontWeight:700,color:'#92400e'}}>↩ 오늘 출고기록 전체 롤백</div>
+          <div style={{fontSize:11,color:'#a16207',marginTop:2}}>오늘 생성된 출고기록 삭제 → 재고 복구</div>
+        </div>
+        <button onClick={rollbackToday}
+          style={{padding:'7px 14px',background:'#d97706',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:'inherit'}}>
+          롤백 실행
         </button>
       </div>
 
