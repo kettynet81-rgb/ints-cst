@@ -309,6 +309,22 @@ export default function ShipmentCalendar({ transactions, stockMap = {} }) {
 
 
   // 날짜 하루 앞당기기 (잘못 들어간 데이터 수정)
+  const shiftDatesBack = async () => {
+    const monthStr = `${year}-${String(month+1).padStart(2,'0')}`
+    const targets = transactions.filter(t => t.type==='출하계획' && t.isHeader && (t.date||'').startsWith(monthStr))
+    if (!window.confirm(`${year}년 ${month+1}월 출하계획 ${targets.length}건 -1일 수정합니다.\n예: ${monthStr}-07 → ${monthStr}-06\n\n계속하시겠습니까?`)) return
+    let count = 0
+    for (const t of targets) {
+      if (!t.date) continue
+      const parts = t.date.split('-').map(Number)
+      const d = new Date(parts[0], parts[1]-1, parts[2]-1)
+      const newDate = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+      await updateDoc(doc(db,'transactions',t.id), { date: newDate })
+      count++
+    }
+    alert(`${count}건 날짜 -1일 수정 완료`)
+  }
+
   const shiftDatesForward = async () => {
     const monthStr = `${year}-${String(month+1).padStart(2,'0')}`
     const targets = transactions.filter(t => t.type==='출하계획' && t.isHeader && (t.date||'').startsWith(monthStr))
@@ -454,6 +470,10 @@ export default function ShipmentCalendar({ transactions, stockMap = {} }) {
             <button onClick={shiftDatesForward}
               style={{...S.uploadBtn,background:'#7c3aed',color:'#fff',border:'none',cursor:'pointer'}}>
               📅 날짜 +1일
+            </button>
+            <button onClick={shiftDatesBack}
+              style={{padding:'6px 10px',background:'#6b7280',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:'inherit'}}>
+              📅 날짜 -1일
             </button>
             <button onClick={async()=>{
               if(!window.confirm('등록된 출하계획을 전부 삭제하시겠습니까?\n(확정된 건 제외)')) return
