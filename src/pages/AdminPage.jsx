@@ -201,6 +201,43 @@ export default function AdminPage() {
     alert(`${list.length}건 삭제 완료 - 재고 복구됨`)
   }
 
+
+  // 출고기록 완전 초기화 후 확정 계획 기준으로 재생성
+  const resetOutbound = async () => {
+    const { ITEMS } = await import('../data/items')
+    if (!window.confirm('⚠ 출고기록 완전 초기화\n\n모든 출고기록을 삭제하고\n확정된 출하계획 기준으로 다시 생성합니다.\n\n계속하시겠습니까?')) return
+
+    const allSnap = await getDocs(collection(db,'transactions'))
+    const allDocs = allSnap.docs.map(d=>({id:d.id,...d.data()}))
+
+    // 1. 기존 출고기록 전부 삭제
+    const outbounds = allDocs.filter(d=>d.type==='출고')
+    for (let i=0; i<outbounds.length; i+=400) {
+      const batch = writeBatch(db)
+      outbounds.slice(i,i+400).forEach(d=>batch.delete(doc(db,'transactions',d.id)))
+      await batch.commit()
+    }
+
+    // 2. 확정된 출하계획 기준으로 재생성
+    const confirmedPlans = allDocs.filter(d=>d.type==='출하계획'&&d.status==='confirmed'&&d.isHeader&&d.shipmentId)
+    let created = 0
+    for (const plan of confirmedPlans) {
+      const batch = writeBatch(db)
+      for (const item of ITEMS) {
+        batch.set(doc(collection(db,'transactions')), {
+          type:'출고', itemCode:item.code, itemName:item.name,
+          quantity: item.needPerSet * plan.setQty,
+          date: plan.date, shipmentId: plan.shipmentId,
+          memo: `제품출하 ${plan.setQty}SET`,
+          createdAt: serverTimestamp()
+        })
+        created++
+      }
+      await batch.commit()
+    }
+    alert(`완료\n출고기록 ${outbounds.length}건 삭제\n확정 ${confirmedPlans.length}건 × 32품목 = ${created}건 재생성`)
+  }
+
   // 공휴일 추가/삭제
   const addHoliday = async () => {
     if (!hForm.date || !hForm.name.trim()) return
@@ -364,6 +401,18 @@ export default function AdminPage() {
         <button onClick={rollbackToday}
           style={{padding:'7px 14px',background:'#d97706',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:'inherit'}}>
           롤백 실행
+        </button>
+      </div>
+
+      {/* 출고기록 완전 초기화 */}
+      <div style={{marginBottom:12,padding:'12px 14px',background:'#fdf4ff',border:'1px solid #e9d5ff',borderRadius:8,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div>
+          <div style={{fontSize:13,fontWeight:700,color:'#6b21a8'}}>🔄 출고기록 완전 초기화</div>
+          <div style={{fontSize:11,color:'#7e22ce',marginTop:2}}>출고기록 전체 삭제 후 확정계획 기준으로 정확히 재생성</div>
+        </div>
+        <button onClick={resetOutbound}
+          style={{padding:'7px 14px',background:'#7c3aed',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:'inherit'}}>
+          초기화
         </button>
       </div>
 
