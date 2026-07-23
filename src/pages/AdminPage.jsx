@@ -122,7 +122,9 @@ export default function AdminPage() {
     })
     const missing = confirmedPlans.filter(p=>p.shipmentId&&(!outCounts[p.shipmentId]||outCounts[p.shipmentId]<30))
 
-    if (missing.length === 0) { alert('출고기록 누락 없습니다!'); return }
+    alert(`전체 트랜잭션: ${allDocs.length}건\n확정 출하계획: ${confirmedPlans.length}건\n누락 발견: ${missing.length}건`)
+
+    if (missing.length === 0) { return }
 
     const msg = missing.map(p=>`${p.date} / ${p.setQty}EA`).join('\n')
     if (!window.confirm(`출고기록 없는 확정 건 ${missing.length}개:\n${msg}\n\n출고기록 생성(재고 차감)하시겠습니까?`)) return
