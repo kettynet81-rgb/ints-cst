@@ -120,9 +120,11 @@ export default function AdminPage() {
     allDocs.filter(d=>d.type==='출고'&&d.shipmentId).forEach(d=>{
       outCounts[d.shipmentId] = (outCounts[d.shipmentId]||0)+1
     })
+    const outTotal = allDocs.filter(d=>d.type==='출고').length
     const missing = confirmedPlans.filter(p=>p.shipmentId&&(!outCounts[p.shipmentId]||outCounts[p.shipmentId]<30))
 
-    alert(`전체 트랜잭션: ${allDocs.length}건\n확정 출하계획: ${confirmedPlans.length}건\n누락 발견: ${missing.length}건`)
+    const detail = confirmedPlans.slice(0,5).map(p=>`${p.date} ${p.setQty}EA → 출고기록 ${outCounts[p.shipmentId]||0}개`).join('\n')
+    alert(`전체 트랜잭션: ${allDocs.length}건\n확정 출하계획: ${confirmedPlans.length}건\n출고기록 합계: ${outTotal}건\n예상(22×32): ${confirmedPlans.length*32}건\n누락 발견: ${missing.length}건\n\n샘플:\n${detail}`)
 
     if (missing.length === 0) { return }
 
