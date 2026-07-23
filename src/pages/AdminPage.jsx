@@ -111,17 +111,16 @@ export default function AdminPage() {
   // 확정됐는데 출고기록 없는 건 찾아서 재생성
   const fixMissingOutbound = async () => {
     const { ITEMS } = await import('../data/items')
-    const { collection:col2, getDocs:gd2, query:q2, where:w2, writeBatch:wb2, doc:d2, serverTimestamp:st2 } = await import('firebase/firestore')
 
-    // 확정된 출하계획 전체
-    const planSnap = await getDocs(q2(collection(db,'transactions'), where('type','==','출하계획'), where('status','==','confirmed'), where('isHeader','==',true)))
-    const missing = []
-
-    for (const planDoc of planSnap.docs) {
-      const plan = { id: planDoc.id, ...planDoc.data() }
-      const outSnap = await getDocs(q2(collection(db,'transactions'), where('shipmentId','==',plan.shipmentId), where('type','==','출고')))
-      if (outSnap.empty) missing.push(plan)
-    }
+    // 전체 로드 후 클라이언트 필터 (복합 인덱스 불필요)
+    const allSnap = await getDocs(collection(db,'transactions'))
+    const allDocs = allSnap.docs.map(d=>({id:d.id,...d.data()}))
+    const confirmedPlans = allDocs.filter(d=>d.type==='출하계획'&&d.status==='confirmed'&&d.isHeader)
+    const outCounts = {}
+    allDocs.filter(d=>d.type==='출고'&&d.shipmentId).forEach(d=>{
+      outCounts[d.shipmentId] = (outCounts[d.shipmentId]||0)+1
+    })
+    const missing = confirmedPlans.filter(p=>p.shipmentId&&(!outCounts[p.shipmentId]||outCounts[p.shipmentId]<30))
 
     if (missing.length === 0) { alert('출고기록 누락 없습니다!'); return }
 
