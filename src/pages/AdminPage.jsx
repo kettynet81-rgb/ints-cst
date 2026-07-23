@@ -123,8 +123,24 @@ export default function AdminPage() {
     const outTotal = allDocs.filter(d=>d.type==='출고').length
     const missing = confirmedPlans.filter(p=>p.shipmentId&&(!outCounts[p.shipmentId]||outCounts[p.shipmentId]<30))
 
-    const detail = confirmedPlans.slice(0,5).map(p=>`${p.date} ${p.setQty}EA → 출고기록 ${outCounts[p.shipmentId]||0}개`).join('\n')
-    alert(`전체 트랜잭션: ${allDocs.length}건\n확정 출하계획: ${confirmedPlans.length}건\n출고기록 합계: ${outTotal}건\n예상(22×32): ${confirmedPlans.length*32}건\n누락 발견: ${missing.length}건\n\n샘플:\n${detail}`)
+    // 중복 출고기록 확인
+    const dupPlans = confirmedPlans.filter(p=>p.shipmentId&&outCounts[p.shipmentId]>32)
+    if (dupPlans.length > 0) {
+      const dupMsg = dupPlans.map(p=>`${p.date} ${p.setQty}EA → ${outCounts[p.shipmentId]}개(정상32개)`).join('\n')
+      if (window.confirm(`⚠ 중복 출고기록 발견:\n${dupMsg}\n\n초과분 삭제해서 32개로 맞추시겠습니까?`)) {
+        for (const plan of dupPlans) {
+          const outDocs = allDocs.filter(d=>d.type==='출고'&&d.shipmentId===plan.shipmentId)
+          const excess = outDocs.slice(32) // 32개 초과분
+          const batch = writeBatch(db)
+          excess.forEach(d => batch.delete(doc(db,'transactions',d.id)))
+          await batch.commit()
+        }
+        alert(`완료: 중복 출고기록 제거됨`)
+        return
+      }
+    }
+
+    alert(`전체: ${allDocs.length}건 | 확정계획: ${confirmedPlans.length}건 | 출고기록: ${outTotal}건 | 예상: ${confirmedPlans.length*32}건 | 누락: ${missing.length}건`)
 
     if (missing.length === 0) { return }
 
