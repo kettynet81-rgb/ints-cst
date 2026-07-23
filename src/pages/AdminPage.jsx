@@ -238,6 +238,24 @@ export default function AdminPage() {
     alert(`완료\n출고기록 ${outbounds.length}건 삭제\n확정 ${confirmedPlans.length}건 × 32품목 = ${created}건 재생성`)
   }
 
+
+  // 재고 검증
+  const verifyStock = async () => {
+    const allSnap = await getDocs(collection(db,'transactions'))
+    const allDocs = allSnap.docs.map(d=>({id:d.id,...d.data()}))
+    
+    const stockMap = {}
+    allDocs.forEach(d => {
+      if (d.type==='입고') stockMap[d.itemCode] = (stockMap[d.itemCode]||0) + (d.quantity||0)
+      if (d.type==='출고') stockMap[d.itemCode] = (stockMap[d.itemCode]||0) - (d.quantity||0)
+    })
+    
+    const lines = Object.entries(stockMap).sort((a,b)=>a[0].localeCompare(b[0]))
+      .map(([code,qty]) => `${code}: ${qty.toLocaleString()}개`).join('\n')
+    
+    alert(`품목별 재고 현황:\n\n${lines}`)
+  }
+
   // 공휴일 추가/삭제
   const addHoliday = async () => {
     if (!hForm.date || !hForm.name.trim()) return
@@ -413,6 +431,18 @@ export default function AdminPage() {
         <button onClick={resetOutbound}
           style={{padding:'7px 14px',background:'#7c3aed',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:'inherit'}}>
           초기화
+        </button>
+      </div>
+
+      {/* 재고 검증 */}
+      <div style={{marginBottom:12,padding:'12px 14px',background:'#f0fdf4',border:'1px solid #bbf7d0',borderRadius:8,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div>
+          <div style={{fontSize:13,fontWeight:700,color:'#166534'}}>📊 재고 검증 (입고-출고 합산)</div>
+          <div style={{fontSize:11,color:'#16a34a',marginTop:2}}>전체 입고/출고 기록 기준 품목별 재고 계산</div>
+        </div>
+        <button onClick={verifyStock}
+          style={{padding:'7px 14px',background:'#16a34a',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:'inherit'}}>
+          검증
         </button>
       </div>
 
