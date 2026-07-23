@@ -86,7 +86,7 @@ export default function AdminPage() {
         // 출고기록 없으면 생성
         if (outSnap.empty && plan.setQty) {
           for (const item of ITEMS) {
-            batch.set(d2(collection(db,'transactions')), {
+            batch.set(doc(collection(db,'transactions')), {
               type:'출고', itemCode:item.code, itemName:item.name,
               quantity: item.needPerSet * plan.setQty,
               date: newDate, shipmentId: plan.shipmentId,
@@ -131,7 +131,7 @@ export default function AdminPage() {
     for (const plan of missing) {
       const batch = writeBatch(db)
       for (const item of ITEMS) {
-        batch.set(d2(collection(db,'transactions')), {
+        batch.set(doc(collection(db,'transactions')), {
           type:'출고', itemCode:item.code, itemName:item.name,
           quantity: item.needPerSet * plan.setQty,
           date: plan.date, shipmentId: plan.shipmentId,
