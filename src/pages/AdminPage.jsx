@@ -123,19 +123,21 @@ export default function AdminPage() {
     const outTotal = allDocs.filter(d=>d.type==='출고').length
     const missing = confirmedPlans.filter(p=>p.shipmentId&&(!outCounts[p.shipmentId]||outCounts[p.shipmentId]<30))
 
-    // 중복 출고기록 확인
-    const dupPlans = confirmedPlans.filter(p=>p.shipmentId&&outCounts[p.shipmentId]>32)
-    if (dupPlans.length > 0) {
-      const dupMsg = dupPlans.map(p=>`${p.date} ${p.setQty}EA → ${outCounts[p.shipmentId]}개(정상32개)`).join('\n')
-      if (window.confirm(`⚠ 중복 출고기록 발견:\n${dupMsg}\n\n초과분 삭제해서 32개로 맞추시겠습니까?`)) {
-        for (const plan of dupPlans) {
-          const outDocs = allDocs.filter(d=>d.type==='출고'&&d.shipmentId===plan.shipmentId)
-          const excess = outDocs.slice(32) // 32개 초과분
+    // 유효한 shipmentId 목록
+    const validShipmentIds = new Set(confirmedPlans.map(p=>p.shipmentId).filter(Boolean))
+    const allOutbound = allDocs.filter(d=>d.type==='출고')
+    const orphans = allOutbound.filter(d=>!d.shipmentId||!validShipmentIds.has(d.shipmentId))
+
+    if (orphans.length > 0) {
+      const orphanMsg = `고아 출고기록 ${orphans.length}건 발견\n(shipmentId 없거나 삭제된 계획과 연결됨)\n\n삭제하면 재고가 복구됩니다.\n계속하시겠습니까?`
+      if (window.confirm(orphanMsg)) {
+        const CHUNK = 400
+        for (let i=0; i<orphans.length; i+=CHUNK) {
           const batch = writeBatch(db)
-          excess.forEach(d => batch.delete(doc(db,'transactions',d.id)))
+          orphans.slice(i,i+CHUNK).forEach(d=>batch.delete(doc(db,'transactions',d.id)))
           await batch.commit()
         }
-        alert(`완료: 중복 출고기록 제거됨`)
+        alert(`완료: 고아 출고기록 ${orphans.length}건 삭제 → 재고 복구됨`)
         return
       }
     }
