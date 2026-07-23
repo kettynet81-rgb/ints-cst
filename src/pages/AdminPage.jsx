@@ -256,6 +256,47 @@ export default function AdminPage() {
     alert(`품목별 재고 현황:\n\n${lines}`)
   }
 
+
+  // 2026-07-23 스냅샷 복원
+  const restoreSnapshot = async () => {
+    const SNAPSHOT = {"A1-1": 466, "A1-2": 471, "A2": 644, "A3": 709, "A4": 348, "A5": 461, "A6": 336, "A7": 801, "A8-1": 351, "A8-2": 373, "A9": 2082, "A10": 896, "A11": 3317, "A12": 4, "A13": 1296, "A14-1": 510, "A14-2": 444, "A15": 714, "A16": 1151, "A17": 771, "A18": 360, "A19": 1188, "A20": 1191, "A21": 658, "A22": 515, "A23": 1948, "A24": 2098, "A25": 564, "A26": 33, "A27": 116, "A28": 318, "A29": 661}
+    const allSnap = await getDocs(collection(db,'transactions'))
+    const allDocs = allSnap.docs.map(d=>({id:d.id,...d.data()}))
+    
+    // 현재 재고 계산
+    const current = {}
+    allDocs.forEach(d => {
+      if (d.type==='입고') current[d.itemCode] = (current[d.itemCode]||0) + (d.quantity||0)
+      if (d.type==='출고') current[d.itemCode] = (current[d.itemCode]||0) - (d.quantity||0)
+    })
+    
+    // 차이 계산
+    const diffs = Object.entries(SNAPSHOT).map(([code, target]) => {
+      const cur = current[code] || 0
+      const diff = target - cur
+      return {code, target, cur, diff}
+    }).filter(d => d.diff !== 0)
+    
+    if (diffs.length === 0) { alert('재고가 이미 기준값과 일치합니다!'); return }
+    
+    const msg = diffs.slice(0,10).map(d=>`${d.code}: 현재${d.cur} → 기준${d.target} (${d.diff>0?'+':''}${d.diff})`).join('\n')
+    if (!window.confirm(`스냅샷 복원 (${diffs.length}개 품목 조정):\n${msg}${diffs.length>10?'\n...(외 '+(diffs.length-10)+'개)':''}\n\n조정 입출고 기록을 생성합니다. 계속하시겠습니까?`)) return
+    
+    const batch = writeBatch(db)
+    diffs.forEach(d => {
+      batch.set(doc(collection(db,'transactions')), {
+        type: d.diff > 0 ? '입고' : '출고',
+        itemCode: d.code,
+        quantity: Math.abs(d.diff),
+        date: '2026-07-23',
+        memo: '재고 스냅샷 복원 (2026-07-23)',
+        createdAt: serverTimestamp()
+      })
+    })
+    await batch.commit()
+    alert(`완료: ${diffs.length}개 품목 조정됨`)
+  }
+
   // 공휴일 추가/삭제
   const addHoliday = async () => {
     if (!hForm.date || !hForm.name.trim()) return
@@ -443,6 +484,18 @@ export default function AdminPage() {
         <button onClick={verifyStock}
           style={{padding:'7px 14px',background:'#16a34a',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:'inherit'}}>
           검증
+        </button>
+      </div>
+
+      {/* 스냅샷 복원 */}
+      <div style={{marginBottom:12,padding:'12px 14px',background:'#eff6ff',border:'1px solid #bfdbfe',borderRadius:8,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div>
+          <div style={{fontSize:13,fontWeight:700,color:'#1e40af'}}>📸 2026-07-23 재고 복원</div>
+          <div style={{fontSize:11,color:'#2563eb',marginTop:2}}>검증된 기준값으로 재고 조정 입출고 생성</div>
+        </div>
+        <button onClick={restoreSnapshot}
+          style={{padding:'7px 14px',background:'#1e40af',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:'inherit'}}>
+          복원
         </button>
       </div>
 
