@@ -115,6 +115,7 @@ export default function CMMReport() {
   const [status, setStatus]         = useState('')
   const [processing, setProcessing] = useState(false)
   const [watching, setWatching]     = useState(false)
+  const [folderName, setFolderName] = useState('')
   const dirHandleRef = useRef(null)
   const processedRef = useRef(new Set()) // 이미 처리한 파일명
   const intervalRef  = useRef(null)
@@ -153,7 +154,6 @@ export default function CMMReport() {
     }
   }, [])
 
-  const [folderName, setFolderName] = useState('')
 
   // 폴더만 선택 (감시 시작 X)
   const selectFolder = async () => {
