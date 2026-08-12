@@ -48,7 +48,7 @@ function parseCMM(data) {
 }
 
 function fillReport(templateData, cmmResults) {
-  const wb = XLSX.read(templateData, { type: 'array', cellStyles: true, cellFormula: true })
+  const wb = XLSX.read(new Uint8Array(templateData), { type: 'array', cellStyles: true, cellFormula: true })
   const sheets = wb.SheetNames
   const ws2 = wb.Sheets['2 CASSETTE CHECK POINT']
   const ws3 = wb.Sheets['3 CASSETTE CHECK POINT']
