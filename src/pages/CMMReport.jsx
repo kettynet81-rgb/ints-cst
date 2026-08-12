@@ -124,6 +124,41 @@ export default function CMMReport() {
     reader.readAsArrayBuffer(file)
   }
 
+
+  // 폴더 선택해서 CMM 파일 자동으로 읽기
+  const selectFolder = async () => {
+    if (!window.showDirectoryPicker) {
+      alert('폴더 선택은 Chrome/Edge에서만 지원됩니다')
+      return
+    }
+    try {
+      const dirHandle = await window.showDirectoryPicker()
+      setProcessing(true)
+      setStatus('폴더 읽는 중...')
+      const newResults = {}
+      let count = 0
+      for await (const entry of dirHandle.values()) {
+        if (entry.kind !== 'file') continue
+        const name = entry.name.toLowerCase()
+        if (!name.endsWith('.xls') && !name.endsWith('.xlsx')) continue
+        const rfid = entry.name.replace(/\.[^.]+$/, '').trim()
+        const file = await entry.getFile()
+        const buf = await file.arrayBuffer()
+        try {
+          const vals = parseCMM(new Uint8Array(buf))
+          newResults[rfid] = vals
+          count++
+        } catch(e) { console.error(rfid, e) }
+      }
+      setResults(prev => ({...prev, ...newResults}))
+      setStatus(`폴더에서 ${count}개 파일 읽기 완료`)
+      setProcessing(false)
+    } catch(e) {
+      if (e.name !== 'AbortError') alert('오류: ' + e.message)
+      setProcessing(false)
+    }
+  }
+
   // CMM 파일 업로드 (여러 개)
   const onCMM = useCallback((e) => {
     const files = Array.from(e.target.files)
@@ -197,8 +232,12 @@ export default function CMMReport() {
           <span style={{fontSize:11,color:'#6b7280',fontWeight:400,marginLeft:8}}>여러 파일 동시 선택 가능</span>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+          <button onClick={selectFolder} disabled={processing}
+            style={{padding:'7px 16px',background:'#7c3aed',color:'#fff',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700,border:'none'}}>
+            📁 폴더 선택 (자동)
+          </button>
           <label style={{padding:'7px 16px',background:'#1e40af',color:'#fff',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700}}>
-            📂 CMM 파일 선택
+            📂 파일 직접 선택
             <input type="file" accept=".xlsx,.xls,.xlsm" multiple style={{display:'none'}} onChange={onCMM} disabled={processing}/>
           </label>
           {rfidList.length > 0 && (
