@@ -77,9 +77,9 @@ function MainApp() {
     { id:'history',   icon:'≡', label:'이력 조회',  group:'조립팀' },
     { id:'recall',    icon:'🔧', label:'리콜',        group:'품질관리' },
     { id:'repair',    icon:'🛠', label:'Repair',       group:'품질관리' },
-    { id:'cmm',       icon:'📐', label:'CMM 성적서',   group:'품질관리' },
+    { id:'cmm',       icon:'📐', label:'CMM 성적서',   group:'성적서' },
+    { id:'certconv',   icon:'📋', label:'CST 성적서',   group:'성적서' },
     { id:'processing', icon:'🔩', label:'가공 현황',  group:'가공팀' },
-    { id:'certconv',   icon:'📋', label:'CST성적서 데이터 변환', group:'가공팀' },
     ...(userRole==='admin' ? [{ id:'admin', icon:'◉', label:'사용자 관리', group:'시스템' }] : []),
   ]
 
