@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import * as XLSX from 'xlsx'
 
 // CMM xls에서 측정값 추출
@@ -114,6 +114,10 @@ export default function CMMReport() {
   const [results, setResults]       = useState({}) // rfid → vals
   const [status, setStatus]         = useState('')
   const [processing, setProcessing] = useState(false)
+  const [watching, setWatching]     = useState(false)
+  const dirHandleRef = useRef(null)
+  const processedRef = useRef(new Set()) // 이미 처리한 파일명
+  const intervalRef  = useRef(null)
 
   // 성적서 양식 업로드
   const onTemplate = (e) => {
@@ -124,8 +128,32 @@ export default function CMMReport() {
     reader.readAsArrayBuffer(file)
   }
 
+  // 폴더 스캔 (새 파일만 처리)
+  const scanFolder = useCallback(async (dirHandle) => {
+    const newResults = {}
+    let count = 0
+    for await (const entry of dirHandle.values()) {
+      if (entry.kind !== 'file') continue
+      const name = entry.name.toLowerCase()
+      if (!name.endsWith('.xls') && !name.endsWith('.xlsx')) continue
+      if (processedRef.current.has(entry.name)) continue // 중복 skip
+      const rfid = entry.name.replace(/\.[^.]+$/, '').trim()
+      const file = await entry.getFile()
+      const buf = await file.arrayBuffer()
+      try {
+        const vals = parseCMM(new Uint8Array(buf))
+        newResults[rfid] = vals
+        processedRef.current.add(entry.name)
+        count++
+      } catch(e) { console.error(rfid, e) }
+    }
+    if (count > 0) {
+      setResults(prev => ({...prev, ...newResults}))
+      setStatus(`새 파일 ${count}개 감지됨 (자동 업데이트)`)
+    }
+  }, [])
 
-  // 폴더 선택해서 CMM 파일 자동으로 읽기
+  // 폴더 선택 + 실시간 감시 시작
   const selectFolder = async () => {
     if (!window.showDirectoryPicker) {
       alert('폴더 선택은 Chrome/Edge에서만 지원됩니다')
@@ -133,31 +161,30 @@ export default function CMMReport() {
     }
     try {
       const dirHandle = await window.showDirectoryPicker()
+      dirHandleRef.current = dirHandle
+      processedRef.current = new Set()
       setProcessing(true)
       setStatus('폴더 읽는 중...')
-      const newResults = {}
-      let count = 0
-      for await (const entry of dirHandle.values()) {
-        if (entry.kind !== 'file') continue
-        const name = entry.name.toLowerCase()
-        if (!name.endsWith('.xls') && !name.endsWith('.xlsx')) continue
-        const rfid = entry.name.replace(/\.[^.]+$/, '').trim()
-        const file = await entry.getFile()
-        const buf = await file.arrayBuffer()
-        try {
-          const vals = parseCMM(new Uint8Array(buf))
-          newResults[rfid] = vals
-          count++
-        } catch(e) { console.error(rfid, e) }
-      }
-      setResults(prev => ({...prev, ...newResults}))
-      setStatus(`폴더에서 ${count}개 파일 읽기 완료`)
+      await scanFolder(dirHandle)
       setProcessing(false)
+      setWatching(true)
+      setStatus('✅ 폴더 감시 중 (10초마다 자동 업데이트)')
+      // 10초마다 새 파일 체크
+      intervalRef.current = setInterval(() => scanFolder(dirHandle), 10000)
     } catch(e) {
       if (e.name !== 'AbortError') alert('오류: ' + e.message)
       setProcessing(false)
     }
   }
+
+  // 감시 중지
+  const stopWatch = () => {
+    clearInterval(intervalRef.current)
+    setWatching(false)
+    setStatus('감시 중지됨')
+  }
+
+  useEffect(() => () => clearInterval(intervalRef.current), [])
 
   // CMM 파일 업로드 (여러 개)
   const onCMM = useCallback((e) => {
@@ -232,10 +259,16 @@ export default function CMMReport() {
           <span style={{fontSize:11,color:'#6b7280',fontWeight:400,marginLeft:8}}>여러 파일 동시 선택 가능</span>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
-          <button onClick={selectFolder} disabled={processing}
-            style={{padding:'7px 16px',background:'#7c3aed',color:'#fff',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700,border:'none'}}>
-            📁 폴더 선택 (자동)
-          </button>
+          {!watching
+            ? <button onClick={selectFolder} disabled={processing}
+                style={{padding:'7px 16px',background:'#7c3aed',color:'#fff',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700,border:'none'}}>
+                📁 폴더 선택 (자동 감시)
+              </button>
+            : <button onClick={stopWatch}
+                style={{padding:'7px 16px',background:'#dc2626',color:'#fff',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700,border:'none'}}>
+                ⏹ 감시 중지
+              </button>
+          }
           <label style={{padding:'7px 16px',background:'#1e40af',color:'#fff',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700}}>
             📂 파일 직접 선택
             <input type="file" accept=".xlsx,.xls,.xlsm" multiple style={{display:'none'}} onChange={onCMM} disabled={processing}/>
