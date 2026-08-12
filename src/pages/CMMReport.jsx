@@ -59,7 +59,7 @@ function fillReport(templateData, cmmResults) {
   const rows4 = XLSX.utils.sheet_to_json(ws4, { header: 1, defval: '' })
   let hdr4 = -1
   for (let i = 0; i < rows4.length; i++) {
-    if (String(rows4[i][1]).includes('순번')) { hdr4 = i; break }
+    if (rows4[i].some(v => String(v).includes('순번'))) { hdr4 = i; break }
   }
   if (hdr4 < 0) throw new Error("'4 SLIDER' 시트에서 '순번' 행을 찾을 수 없음")
 
@@ -73,7 +73,7 @@ function fillReport(templateData, cmmResults) {
   const getHdr = (ws) => {
     const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
     for (let i = 0; i < rows.length; i++) {
-      if (String(rows[i][1]).includes('순번')) return i
+      if (rows[i].some(v => String(v).includes('순번'))) return i
     }
     return -1
   }
