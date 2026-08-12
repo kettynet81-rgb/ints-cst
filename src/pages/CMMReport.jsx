@@ -18,7 +18,7 @@ function parseCMM(data) {
 }
 
 function fillReport(templateData, cmmResults) {
-  const wb = XLSX.read(templateData, { type: 'array' })
+  const wb = XLSX.read(templateData, { type: 'array', cellStyles: true, cellFormula: true })
   const ws2 = wb.Sheets['2 CASSETTE CHECK POINT']
   const ws3 = wb.Sheets['3 CASSETTE CHECK POINT']
   const ws4 = wb.Sheets['4 SLIDER']
@@ -55,18 +55,20 @@ function fillReport(templateData, cmmResults) {
     const colMap2 = { 'A':4, 'B':5, 'B-1':6, 'B-2':7, 'C':8, 'D':9, 'D-1':10, 'D-2':11, 'D-3':12 }
     for (const [item, col] of Object.entries(colMap2)) {
       if (vals[item] !== undefined)
-        ws2[XLSX.utils.encode_cell({ r: ri2, c: col })] = { t: 'n', v: vals[item] }
+        const addr2 = XLSX.utils.encode_cell({ r: ri2, c: col })
+        ws2[addr2] = { ...(ws2[addr2]||{}), t: 'n', v: vals[item], f: undefined }
     }
     if (ws3 && hdr3 >= 0) {
       const ri3 = hdr3 + seq
       const colMap3 = { 'E-1L':4, 'E-1R':5, 'F-1L':6, 'F-1R':7 }
       for (const [item, col] of Object.entries(colMap3)) {
         if (vals[item] !== undefined)
-          ws3[XLSX.utils.encode_cell({ r: ri3, c: col })] = { t: 'n', v: vals[item] }
+          const addr3 = XLSX.utils.encode_cell({ r: ri3, c: col })
+          ws3[addr3] = { ...(ws3[addr3]||{}), t: 'n', v: vals[item], f: undefined }
       }
     }
   }
-  return XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+  return XLSX.write(wb, { bookType: 'xlsx', type: 'array', cellStyles: true })
 }
 
 const COLS = [
