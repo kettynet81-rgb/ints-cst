@@ -142,26 +142,9 @@ async function fillReport(templateData, cmmResults) {
   if (hdrRow4 < 0) throw new Error(`'4 SLIDER' 순번 행 없음 (sharedStrings에서 '순번' 인덱스: ${junbunIdx})`)
 
 
-  // 2 CASSETTE CHECK POINT 헤더 행 찾기
+  // 2 CASSETTE는 4 SLIDER 기준 +1 오프셋 사용 (순번 셀 없음)
   let s2xml = await zip.file(s2path).async('text')
-  const rowMatches2 = [...s2xml.matchAll(/<row[^>]+r="(\d+)"[^>]*>([\s\S]*?)<\/row>/g)]
-  let hdrRow2 = -1
-  for (const rm of rowMatches2) {
-    const rc = rm[2]
-    if (rc.includes('>순번<') || (junbunIdx >= 0 && rc.includes(`<v>${junbunIdx}</v>`)))
-      { hdrRow2 = Number(rm[1]); break }
-  }
-  if (hdrRow2 < 0) throw new Error("'2 CASSETTE CHECK POINT' 순번 행 없음")
-
   let s3xml = s3path ? await zip.file(s3path).async('text') : null
-  let hdrRow3 = -1
-  if (s3xml) {
-    for (const rm of [...s3xml.matchAll(/<row[^>]+r="(\d+)"[^>]*>([\s\S]*?)<\/row>/g)]) {
-      const rc = rm[2]
-      if (rc.includes('>순번<') || (junbunIdx >= 0 && rc.includes(`<v>${junbunIdx}</v>`)))
-        { hdrRow3 = Number(rm[1]); break }
-    }
-  }
 
   // 2 CASSETTE 컬럼 매핑 (E=5, F=6, G=7, H=8, I=9, J=10, K=11, L=12, M=13)
   const colMap2 = {'A':'E','B':'F','B-1':'G','B-2':'H','C':'I','D':'J','D-1':'K','D-2':'L','D-3':'M'}
@@ -188,15 +171,15 @@ async function fillReport(templateData, cmmResults) {
     const seq = rfidSeq[rfid]
     if (!seq) continue
 
-    // 2 CASSETTE: 헤더 다음 행부터 (행 하나 건너뜀 - 공차행)
-    const ri2 = hdrRow2 + seq + 1
+    // 2 CASSETTE: 4 SLIDER 헤더 기준 +seq+1 (공차 행 있어서 +1 추가)
+    const ri2 = hdrRow4 + seq + 1
     for (const [item, col] of Object.entries(colMap2)) {
       if (vals[item] !== undefined) s2xml = setCellValue(s2xml, ri2, col, vals[item])
     }
 
-    // 3 CASSETTE
-    if (s3xml && hdrRow3 > 0) {
-      const ri3 = hdrRow3 + seq + 1
+    // 3 CASSETTE: 4 SLIDER 기준 동일 오프셋
+    if (s3xml) {
+      const ri3 = hdrRow4 + seq + 1
       for (const [item, col] of Object.entries(colMap3)) {
         if (vals[item] !== undefined) s3xml = setCellValue(s3xml, ri3, col, vals[item])
       }
