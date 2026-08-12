@@ -175,7 +175,7 @@ export default function CMMReport() {
   const [results, setResults]       = useState({}) // rfid → vals
   const [rfidOrder, setRfidOrder]   = useState([]) // 성적서 RFID 순서
   const [templateWb, setTemplateWb]  = useState(null)
-  const [activeSheet, setActiveSheet] = useState('2 CASSETTE CHECK POINT')
+  const [activeSheet, setActiveSheet] = useState('')
   const [rfidSeq, setRfidSeq]       = useState({})
   const [status, setStatus]         = useState('')
   const [watching, setWatching]     = useState(false)
@@ -189,6 +189,7 @@ export default function CMMReport() {
     try {
       const wbObj = XLSX.read(buf, { type: 'array' })
       setTemplateWb(wbObj)
+      setActiveSheet(wbObj.SheetNames[0])
       const wb = XLSX.read(buf, { type: 'array' })
       const ws4 = wb.Sheets['4 SLIDER']
       if (!ws4) return
@@ -322,8 +323,8 @@ export default function CMMReport() {
       {/* 시트 뷰 탭 */}
       {templateWb && (
         <div style={{background:'#fff',borderRadius:10,border:'1px solid #e5e7eb',overflow:'hidden'}}>
-          <div style={{display:'flex',gap:0,borderBottom:'1px solid #e5e7eb',background:'#f8fafc'}}>
-            {['2 CASSETTE CHECK POINT','3 CASSETTE CHECK POINT'].map(s=>(
+          <div style={{display:'flex',gap:0,borderBottom:'1px solid #e5e7eb',background:'#f8fafc',overflowX:'auto'}}>
+            {templateWb.SheetNames.map(s=>(
               <button key={s} onClick={()=>setActiveSheet(s)}
                 style={{padding:'8px 14px',border:'none',cursor:'pointer',fontSize:11,fontFamily:'inherit',
                   background:activeSheet===s?'#fff':'transparent',
