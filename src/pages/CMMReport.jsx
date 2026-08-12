@@ -136,7 +136,7 @@ export default function CMMReport() {
       if (entry.kind !== 'file') continue
       const name = entry.name.toLowerCase()
       if (!name.endsWith('.xls') && !name.endsWith('.xlsx')) continue
-      if (processedRef.current.has(entry.name)) continue // 중복 skip
+      // 항상 최신 파일로 덮어씌움
       const rfid = entry.name.replace(/\.[^.]+$/, '').trim()
       const file = await entry.getFile()
       const buf = await file.arrayBuffer()
