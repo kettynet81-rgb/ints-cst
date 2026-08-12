@@ -269,10 +269,7 @@ export default function CMMReport() {
                 ⏹ 감시 중지
               </button>
           }
-          <label style={{padding:'7px 16px',background:'#1e40af',color:'#fff',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700}}>
-            📂 파일 직접 선택
-            <input type="file" accept=".xlsx,.xls,.xlsm" multiple style={{display:'none'}} onChange={onCMM} disabled={processing}/>
-          </label>
+
           {rfidList.length > 0 && (
             <button onClick={()=>{setResults({});setCmmFiles([]);setStatus('')}}
               style={{padding:'7px 12px',background:'#f3f4f6',border:'1px solid #d1d5db',borderRadius:6,cursor:'pointer',fontSize:12,color:'#6b7280'}}>
