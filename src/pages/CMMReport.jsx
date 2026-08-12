@@ -57,6 +57,7 @@ function fillReport(templateData, cmmResults) {
     if (ri === undefined) continue
 
     // 2 CASSETTE CHECK POINT 매핑
+    // 2 CASSETTE CHECK POINT: A, B, B-1, B-2, C, D, D-1, D-2, D-3
     const colMap2 = { 'A':4, 'B':5, 'B-1':6, 'B-2':7, 'C':8, 'D':9, 'D-1':10, 'D-2':11, 'D-3':12 }
     for (const [item, col] of Object.entries(colMap2)) {
       if (vals[item] !== undefined) {
@@ -64,10 +65,34 @@ function fillReport(templateData, cmmResults) {
         ws2[addr] = { t: 'n', v: vals[item] }
       }
     }
-    // H열 (E-1L, E-1R 평균)
-    if (vals['E-1L'] !== undefined && vals['E-1R'] !== undefined) {
-      const addr = XLSX.utils.encode_cell({ r: ri, c: 13 })
-      ws2[addr] = { t: 'n', v: (vals['E-1L'] + vals['E-1R']) / 2 }
+  }
+
+  // 3 CASSETTE CHECK POINT - E-1(L), E-2(R), F-1(L), F-2(R)
+  const ws3 = wb.Sheets['3 CASSETTE CHECK POINT']
+  if (ws3) {
+    const rows3 = XLSX.utils.sheet_to_json(ws3, { header: 1, defval: '' })
+    let hdr3 = -1
+    for (let i = 0; i < rows3.length; i++) {
+      if (String(rows3[i][1]).includes('순번')) { hdr3 = i; break }
+    }
+    if (hdr3 >= 0) {
+      const rfidMap3 = {}
+      for (let i = hdr3 + 1; i < rows3.length; i++) {
+        const rfid = String(rows3[i][3] || '').trim()
+        if (rfid.startsWith('IF')) rfidMap3[rfid] = i
+      }
+      for (const [rfid, vals] of Object.entries(cmmResults)) {
+        const ri = rfidMap3[rfid]
+        if (ri === undefined) continue
+        // E-1L→E-1(L), E-1R→E-2(R), F-1L→F-1(L), F-1R→F-2(R)
+        const colMap3 = { 'E-1L':4, 'E-1R':5, 'F-1L':6, 'F-1R':7 }
+        for (const [item, col] of Object.entries(colMap3)) {
+          if (vals[item] !== undefined) {
+            const addr = XLSX.utils.encode_cell({ r: ri, c: col })
+            ws3[addr] = { t: 'n', v: vals[item] }
+          }
+        }
+      }
     }
   }
 
@@ -84,17 +109,7 @@ function fillReport(templateData, cmmResults) {
         const rfid = String(rows4[i][3] || '').trim()
         if (rfid.startsWith('IF')) rfidMap4[rfid] = i
       }
-      for (const [rfid, vals] of Object.entries(cmmResults)) {
-        const ri = rfidMap4[rfid]
-        if (ri === undefined) continue
-        const colMap4 = { 'F-1L':4, 'F-1R':5 }
-        for (const [item, col] of Object.entries(colMap4)) {
-          if (vals[item] !== undefined) {
-            const addr = XLSX.utils.encode_cell({ r: ri, c: col })
-            ws4[addr] = { t: 'n', v: vals[item] }
-          }
-        }
-      }
+      // 4 SLIDER 시트는 별도 측정값 사용 (현재 자동입력 없음)
     }
   }
 
