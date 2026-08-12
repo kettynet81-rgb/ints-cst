@@ -70,20 +70,29 @@ function patchCell(xml, cellAddr, value) {
 async function fillReport(templateData, cmmResults) {
   const zip = await JSZip.loadAsync(templateData)
 
-  // workbook.xml에서 시트명→파일 매핑
+  // workbook.xml에서 시트명→파일 매핑 (DOMParser 사용)
   const wbXml = await zip.file('xl/workbook.xml').async('text')
   const wbRels = await zip.file('xl/_rels/workbook.xml.rels').async('text')
+  const parser = new DOMParser()
+
+  const wbDoc = parser.parseFromString(wbXml, 'application/xml')
+  const relDoc = parser.parseFromString(wbRels, 'application/xml')
 
   // 시트명 → rId 매핑
   const sheetMap = {}
-  for (const m of wbXml.matchAll(/name="([^"]+)"[^/]*r:id="(rId\d+)"/g)) {
-    sheetMap[m[1]] = m[2]
-  }
+  wbDoc.querySelectorAll('sheet').forEach(sh => {
+    const name = sh.getAttribute('name')
+    const rId = sh.getAttribute('r:id') || sh.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id')
+    if (name && rId) sheetMap[name] = rId
+  })
+
   // rId → 파일경로 매핑
   const relMap = {}
-  for (const m of wbRels.matchAll(/Id="(rId\d+)"[^/]*Target="([^"]+)"/g)) {
-    relMap[m[1]] = m[2].startsWith('worksheets') ? 'xl/'+m[2] : m[2]
-  }
+  relDoc.querySelectorAll('Relationship').forEach(r => {
+    const id = r.getAttribute('Id')
+    const target = r.getAttribute('Target')
+    if (id && target) relMap[id] = target.startsWith('worksheets') ? 'xl/'+target : target
+  })
 
   const getSheetFile = (name) => {
     const rId = sheetMap[name]
