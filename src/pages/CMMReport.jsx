@@ -85,11 +85,98 @@ const COLS = [
   { key:'F-1R', label:'F-2(R)' },
 ]
 
+
+// 엑셀 시트를 HTML 테이블로 렌더링
+function SheetView({ wb, sheetName, cmmResults, rfidSeq }) {
+  if (!wb || !wb.Sheets[sheetName]) return null
+  const ws = wb.Sheets[sheetName]
+  const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:Z60')
+  const merges = ws['!merges'] || []
+
+  // 병합 셀 맵
+  const mergeMap = {}
+  const hiddenMap = {}
+  merges.forEach(m => {
+    mergeMap[`${m.s.r}_${m.s.c}`] = { rowSpan: m.e.r-m.s.r+1, colSpan: m.e.c-m.s.c+1 }
+    for (let r=m.s.r; r<=m.e.r; r++) {
+      for (let c=m.s.c; c<=m.e.c; c++) {
+        if (r!==m.s.r || c!==m.s.c) hiddenMap[`${r}_${c}`] = true
+      }
+    }
+  })
+
+  // CMM 값 오버레이 계산
+  const overlay = {}
+  if (cmmResults && rfidSeq) {
+    // 헤더 행 찾기
+    let hdr = -1
+    for (let r=range.s.r; r<=range.e.r; r++) {
+      const cell = ws[XLSX.utils.encode_cell({r,c:1})]
+      if (cell && String(cell.v).includes('순번')) { hdr = r; break }
+    }
+    if (hdr >= 0) {
+      const colMap = sheetName.includes('2') 
+        ? { 'A':4,'B':5,'B-1':6,'B-2':7,'C':8,'D':9,'D-1':10,'D-2':11,'D-3':12 }
+        : { 'E-1L':4,'E-1R':5,'F-1L':6,'F-1R':7 }
+      for (const [rfid, vals] of Object.entries(cmmResults)) {
+        const seq = rfidSeq[rfid]
+        if (!seq) continue
+        const ri = hdr + seq
+        for (const [item, col] of Object.entries(colMap)) {
+          if (vals[item] !== undefined) overlay[`${ri}_${col}`] = vals[item].toFixed(4)
+        }
+      }
+    }
+  }
+
+  const rows = []
+  for (let r=range.s.r; r<=range.e.r; r++) {
+    const cells = []
+    for (let c=range.s.c; c<=range.e.c; c++) {
+      if (hiddenMap[`${r}_${c}`]) continue
+      const addr = XLSX.utils.encode_cell({r,c})
+      const cell = ws[addr]
+      const merge = mergeMap[`${r}_${c}`]
+      const ov = overlay[`${r}_${c}`]
+      const val = ov !== undefined ? ov : (cell ? (cell.w || cell.v || '') : '')
+      const isNum = cell?.t === 'n' || ov !== undefined
+      cells.push(
+        <td key={c}
+          rowSpan={merge?.rowSpan||1}
+          colSpan={merge?.colSpan||1}
+          style={{
+            border:'1px solid #d1d5db',
+            padding:'2px 4px',
+            fontSize:10,
+            textAlign: isNum ? 'center' : 'left',
+            whiteSpace:'nowrap',
+            background: ov !== undefined ? '#eff6ff' : 'inherit',
+            color: ov !== undefined ? '#1e40af' : 'inherit',
+            fontWeight: ov !== undefined ? 700 : 'inherit',
+            minWidth: 60,
+          }}>
+          {String(val).startsWith('=') ? '' : val}
+        </td>
+      )
+    }
+    rows.push(<tr key={r}>{cells}</tr>)
+  }
+
+  return (
+    <div style={{overflow:'auto',maxHeight:400}}>
+      <table style={{borderCollapse:'collapse',fontSize:10}}><tbody>{rows}</tbody></table>
+    </div>
+  )
+}
+
 export default function CMMReport() {
   const [template, setTemplate]     = useState(null)
   const [templateName, setTName]    = useState('')
   const [results, setResults]       = useState({}) // rfid → vals
   const [rfidOrder, setRfidOrder]   = useState([]) // 성적서 RFID 순서
+  const [templateWb, setTemplateWb]  = useState(null)
+  const [activeSheet, setActiveSheet] = useState('2 CASSETTE CHECK POINT')
+  const [rfidSeq, setRfidSeq]       = useState({})
   const [status, setStatus]         = useState('')
   const [watching, setWatching]     = useState(false)
   const [folderName, setFolderName] = useState('')
@@ -100,6 +187,8 @@ export default function CMMReport() {
   const loadTemplate = (buf) => {
     setTemplate(buf)
     try {
+      const wbObj = XLSX.read(buf, { type: 'array' })
+      setTemplateWb(wbObj)
       const wb = XLSX.read(buf, { type: 'array' })
       const ws4 = wb.Sheets['4 SLIDER']
       if (!ws4) return
@@ -115,6 +204,13 @@ export default function CMMReport() {
         if (rfid.startsWith('IF')) order.push(rfid)
       }
       setRfidOrder(order)
+      const seqMap = {}
+      for (let i = hdr + 1; i < rows4.length; i++) {
+        const rfid = String(rows4[i][3] || '').trim()
+        const seq = rows4[i][1]
+        if (rfid.startsWith('IF') && seq) seqMap[rfid] = Number(seq)
+      }
+      setRfidSeq(seqMap)
     } catch(e) {}
   }
 
@@ -218,6 +314,25 @@ export default function CMMReport() {
       {status && <div style={{fontSize:11,color:'#6b7280',paddingLeft:4}}>{status}</div>}
 
       {/* 성적서 테이블 */}
+      {/* 시트 뷰 탭 */}
+      {templateWb && (
+        <div style={{background:'#fff',borderRadius:10,border:'1px solid #e5e7eb',overflow:'hidden'}}>
+          <div style={{display:'flex',gap:0,borderBottom:'1px solid #e5e7eb',background:'#f8fafc'}}>
+            {['2 CASSETTE CHECK POINT','3 CASSETTE CHECK POINT'].map(s=>(
+              <button key={s} onClick={()=>setActiveSheet(s)}
+                style={{padding:'8px 14px',border:'none',cursor:'pointer',fontSize:11,fontFamily:'inherit',
+                  background:activeSheet===s?'#fff':'transparent',
+                  fontWeight:activeSheet===s?700:400,
+                  borderBottom:activeSheet===s?'2px solid #1e40af':'none',
+                  color:activeSheet===s?'#1e40af':'#6b7280'}}>
+                {s}
+              </button>
+            ))}
+          </div>
+          <SheetView wb={templateWb} sheetName={activeSheet} cmmResults={results} rfidSeq={rfidSeq}/>
+        </div>
+      )}
+
       {displayList.length > 0 && (
         <div style={{background:'#fff',borderRadius:10,border:'1px solid #e5e7eb',overflow:'auto'}}>
           <table style={{width:'100%',borderCollapse:'collapse',fontSize:11,tableLayout:'fixed',minWidth:900}}>
