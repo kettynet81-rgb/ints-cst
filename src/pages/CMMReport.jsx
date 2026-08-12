@@ -54,17 +54,19 @@ function fillReport(templateData, cmmResults) {
     const ri2 = hdr2 + seq
     const colMap2 = { 'A':4, 'B':5, 'B-1':6, 'B-2':7, 'C':8, 'D':9, 'D-1':10, 'D-2':11, 'D-3':12 }
     for (const [item, col] of Object.entries(colMap2)) {
-      if (vals[item] !== undefined)
+      if (vals[item] !== undefined) {
         const addr2 = XLSX.utils.encode_cell({ r: ri2, c: col })
         ws2[addr2] = { ...(ws2[addr2]||{}), t: 'n', v: vals[item], f: undefined }
+      }
     }
     if (ws3 && hdr3 >= 0) {
       const ri3 = hdr3 + seq
       const colMap3 = { 'E-1L':4, 'E-1R':5, 'F-1L':6, 'F-1R':7 }
       for (const [item, col] of Object.entries(colMap3)) {
-        if (vals[item] !== undefined)
+        if (vals[item] !== undefined) {
           const addr3 = XLSX.utils.encode_cell({ r: ri3, c: col })
           ws3[addr3] = { ...(ws3[addr3]||{}), t: 'n', v: vals[item], f: undefined }
+        }
       }
     }
   }
