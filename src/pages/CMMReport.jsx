@@ -209,6 +209,7 @@ export default function CMMReport() {
   const [status, setStatus]         = useState('')
   const [watching, setWatching]     = useState(false)
   const [folderName, setFolderName] = useState('')
+  const [errors, setErrors]         = useState([])
   const dirHandleRef = useRef(null)
   const intervalRef  = useRef(null)
 
@@ -255,6 +256,7 @@ export default function CMMReport() {
   // 폴더 스캔
   const scanFolder = useCallback(async (dirHandle) => {
     const newResults = {}
+    const newErrors = []
     let count = 0
     for await (const entry of dirHandle.values()) {
       if (entry.kind !== 'file') continue
@@ -264,16 +266,30 @@ export default function CMMReport() {
         const file = await entry.getFile()
         const buf = await file.arrayBuffer()
         const vals = parseCMM(new Uint8Array(buf))
-        newResults[rfid] = vals
-        count++
-      } catch(e) {}
+        if (Object.keys(vals).length === 0) {
+          newErrors.push(`${rfid}: 측정값을 읽을 수 없음 (파일 형식 확인)`)
+        } else {
+          newResults[rfid] = vals
+          count++
+        }
+      } catch(e) {
+        newErrors.push(`${rfid}: ${e.message || '파싱 오류'}`)
+      }
+    }
+    const merged = {...results, ...newResults}
+    // 성적서에 없는 RFID 경고
+    if (rfidOrder.length > 0) {
+      Object.keys(newResults).forEach(rfid => {
+        if (!rfidOrder.includes(rfid)) newErrors.push(`${rfid}: 성적서에 없는 RFID`)
+      })
     }
     if (count > 0) {
-      setResults(prev => ({...prev, ...newResults}))
-      setStatus(`${new Date().toLocaleTimeString()} 업데이트 — ${Object.keys({...results,...newResults}).length}개 RFID`)
+      setResults(merged)
+      setStatus(`${new Date().toLocaleTimeString()} — ${Object.keys(merged).length}개 RFID 읽힘`)
     }
+    if (newErrors.length > 0) setErrors(prev => [...new Set([...prev, ...newErrors])])
     return count
-  }, [results])
+  }, [results, rfidOrder])
 
   const selectFolder = async () => {
     if (!window.showDirectoryPicker) { alert('Chrome/Edge에서만 지원됩니다'); return }
@@ -370,6 +386,17 @@ export default function CMMReport() {
       </div>
 
       {status && <div style={{fontSize:11,color:'#6b7280',paddingLeft:4}}>{status}</div>}
+      {errors.length > 0 && (
+        <div style={{background:'#fff5f5',border:'1px solid #fca5a5',borderRadius:8,padding:'10px 14px'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+            <span style={{fontWeight:700,fontSize:12,color:'#dc2626'}}>⚠ 오류 {errors.length}건</span>
+            <button onClick={()=>setErrors([])} style={{fontSize:11,color:'#9ca3af',background:'none',border:'none',cursor:'pointer'}}>지우기</button>
+          </div>
+          {errors.map((e,i)=>(
+            <div key={i} style={{fontSize:11,color:'#dc2626',marginBottom:2}}>• {e}</div>
+          ))}
+        </div>
+      )}
 
       {/* 성적서 테이블 */}
       {/* 시트 뷰 탭 */}
