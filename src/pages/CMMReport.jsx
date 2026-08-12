@@ -287,14 +287,14 @@ export default function CMMReport() {
         <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
           {/* 양식 업로드 */}
           <label style={{padding:'6px 14px',background:template?'#16a34a':'#374151',color:'#fff',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700}}>
-            {template?'✓ 양식':'📂 양식 업로드'}
+            {template?'✓ 양식 변경':'📂 성적서 양식 업로드'}
             <input type="file" accept=".xlsx,.xls" style={{display:'none'}} onChange={onTemplate}/>
           </label>
           {/* 폴더 감시 */}
           {!watching
             ? <button onClick={selectFolder}
                 style={{padding:'6px 14px',background:'#7c3aed',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700}}>
-                📁 {folderName||'폴더 선택'}
+                📁 측정결과 폴더 선택
               </button>
             : <button onClick={stopWatch}
                 style={{padding:'6px 14px',background:'#dc2626',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700}}>
@@ -308,6 +308,11 @@ export default function CMMReport() {
               cursor:template&&doneCount>0?'pointer':'not-allowed',fontSize:12,fontWeight:700}}>
             ⬇ 다운로드
           </button>
+        </div>
+        {/* 선택 정보 표시 */}
+        <div style={{display:'flex',gap:16,marginTop:8,flexWrap:'wrap'}}>
+          {templateName && <span style={{fontSize:12,color:'#374151'}}>📋 성적서: <strong>{templateName}</strong></span>}
+          {folderName && <span style={{fontSize:12,color:'#374151'}}>📁 측정결과 폴더: <strong>{folderName}</strong></span>}
         </div>
       </div>
 
