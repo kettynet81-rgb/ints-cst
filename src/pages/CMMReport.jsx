@@ -373,7 +373,21 @@ export default function CMMReport() {
                 ⏹ 감시 중지
               </button>
           }
-          {watching && <span style={{fontSize:11,color:'#16a34a',fontWeight:600}}>● 실시간 감시 중</span>}
+          {watching && (
+            <span style={{fontSize:11,color:'#16a34a',fontWeight:600,display:'flex',alignItems:'center',gap:5}}>
+              <span style={{
+                width:8,height:8,borderRadius:'50%',background:'#16a34a',display:'inline-block',
+                animation:'pulse 1.2s ease-in-out infinite'
+              }}/>
+              실시간 감시 중
+            </span>
+          )}
+          <style>{`
+            @keyframes pulse {
+              0%,100%{opacity:1;transform:scale(1)}
+              50%{opacity:0.3;transform:scale(0.8)}
+            }
+          `}</style>
           {/* 다운로드 */}
           <button onClick={download} disabled={!template||doneCount===0}
             style={{padding:'6px 14px',background:template&&doneCount>0?'#1e40af':'#d1d5db',color:'#fff',border:'none',borderRadius:6,
