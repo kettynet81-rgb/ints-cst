@@ -9,6 +9,7 @@ import ShipmentManage from './pages/ShipmentManage'
 import History from './pages/History'
 import AdminPage from './pages/AdminPage'
 import RecallManage from './pages/RecallManage'
+import CMMReport from './pages/CMMReport'
 import AdminDelete from './pages/AdminDelete'
 import ProcessingManage from './pages/ProcessingManage'
 import ShipmentCalendar from './pages/ShipmentCalendar'
@@ -74,8 +75,9 @@ function MainApp() {
     { id:'shipment',  icon:'↓', label:'출하 관리',  group:'조립팀' },
     { id:'shipcal',   icon:'📅', label:'출하계획 관리', group:'조립팀' },
     { id:'history',   icon:'≡', label:'이력 조회',  group:'조립팀' },
-    { id:'recall',    icon:'🔧', label:'리콜',        group:'조립팀' },
-    { id:'repair',    icon:'🛠', label:'Repair',       group:'조립팀' },
+    { id:'recall',    icon:'🔧', label:'리콜',        group:'품질관리' },
+    { id:'repair',    icon:'🛠', label:'Repair',       group:'품질관리' },
+    { id:'cmm',       icon:'📐', label:'CMM 성적서',   group:'품질관리' },
     { id:'processing', icon:'🔩', label:'가공 현황',  group:'가공팀' },
     { id:'certconv',   icon:'📋', label:'CST성적서 데이터 변환', group:'가공팀' },
     ...(userRole==='admin' ? [{ id:'admin', icon:'◉', label:'사용자 관리', group:'시스템' }] : []),
@@ -185,6 +187,7 @@ function MainApp() {
             : page==='processing'? <ProcessingManage stockMap={stockMap}/>
             : page==='certconv'  ? <CertConverter isMobile={isMobile}/>
             : page==='admindel'  ? <AdminDelete/>
+            : page==='cmm'       ? <CMMReport/>
             : page==='recall'    ? <RecallManage key='recall' defaultCategory='리콜'/>
             : page==='repair'    ? <RecallManage key='repair' defaultCategory='Repair'/>
             : page==='shipcal'   ? <ShipmentCalendar transactions={transactions} stockMap={stockMap} onNavigate={setPage}/>
