@@ -14,7 +14,7 @@ function parseCMM(data) {
   const wb = XLSX.read(data, { type: 'array' })
   const vals = {}
 
-  // 신형: Result 시트 있으면
+  // 신형: Result 시트
   if (wb.SheetNames.includes('Result')) {
     const ws = wb.Sheets['Result']
     const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
@@ -25,11 +25,14 @@ function parseCMM(data) {
         vals[normalizeKey(item)] = Number(actual.toFixed(4))
       }
     }
+    if (Object.keys(vals).length === 0)
+      throw new Error(`Result 시트에서 측정값 없음 (시트명: ${wb.SheetNames.join(', ')})`)
     return vals
   }
 
   // 구형: DS 행 방식
   const ws = wb.Sheets[wb.SheetNames[0]]
+  if (!ws) throw new Error(`시트를 열 수 없음 (시트명: ${wb.SheetNames.join(', ')})`)
   const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
   for (let i = 0; i < rows.length; i++) {
     const item = String(rows[i][1] || '').trim()
@@ -39,6 +42,8 @@ function parseCMM(data) {
       i++
     }
   }
+  if (Object.keys(vals).length === 0)
+    throw new Error(`DS 행 없음 — 지원 형식: 구형(DS행) 또는 신형(Result시트)`)
   return vals
 }
 
@@ -267,13 +272,13 @@ export default function CMMReport() {
         const buf = await file.arrayBuffer()
         const vals = parseCMM(new Uint8Array(buf))
         if (Object.keys(vals).length === 0) {
-          newErrors.push({msg:`${rfid}: 측정값을 읽을 수 없음 (파일 형식 확인)`, rfid})
+  // 이미 throw로 처리됨
         } else {
           newResults[rfid] = vals
           count++
         }
       } catch(e) {
-        newErrors.push({msg:`${rfid}: ${e.message || '파싱 오류'}`, rfid})
+        newErrors.push({msg:`${rfid}: ${e.message || '알 수 없는 오류'}`, rfid})
       }
     }
     const merged = {...results, ...newResults}
