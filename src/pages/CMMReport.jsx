@@ -267,27 +267,30 @@ export default function CMMReport() {
         const buf = await file.arrayBuffer()
         const vals = parseCMM(new Uint8Array(buf))
         if (Object.keys(vals).length === 0) {
-          newErrors.push(`${rfid}: 측정값을 읽을 수 없음 (파일 형식 확인)`)
+          newErrors.push({msg:`${rfid}: 측정값을 읽을 수 없음 (파일 형식 확인)`, rfid})
         } else {
           newResults[rfid] = vals
           count++
         }
       } catch(e) {
-        newErrors.push(`${rfid}: ${e.message || '파싱 오류'}`)
+        newErrors.push({msg:`${rfid}: ${e.message || '파싱 오류'}`, rfid})
       }
     }
     const merged = {...results, ...newResults}
     // 성적서에 없는 RFID 경고
     if (rfidOrder.length > 0) {
       Object.keys(newResults).forEach(rfid => {
-        if (!rfidOrder.includes(rfid)) newErrors.push(`${rfid}: 성적서에 없는 RFID`)
+        if (!rfidOrder.includes(rfid)) newErrors.push({msg:`${rfid}: 성적서에 없는 RFID`, rfid})
       })
     }
     if (count > 0) {
       setResults(merged)
       setStatus(`${new Date().toLocaleTimeString()} — ${Object.keys(merged).length}개 RFID 읽힘`)
     }
-    if (newErrors.length > 0) setErrors(prev => [...new Set([...prev, ...newErrors])])
+    if (newErrors.length > 0) setErrors(prev => {
+      const existMsgs = new Set(prev.map(e=>e.msg))
+      return [...prev, ...newErrors.filter(e=>!existMsgs.has(e.msg))]
+    })
     return count
   }, [results, rfidOrder])
 
@@ -388,12 +391,27 @@ export default function CMMReport() {
       {status && <div style={{fontSize:11,color:'#6b7280',paddingLeft:4}}>{status}</div>}
       {errors.length > 0 && (
         <div style={{background:'#fff5f5',border:'1px solid #fca5a5',borderRadius:8,padding:'10px 14px'}}>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
             <span style={{fontWeight:700,fontSize:12,color:'#dc2626'}}>⚠ 오류 {errors.length}건</span>
-            <button onClick={()=>setErrors([])} style={{fontSize:11,color:'#9ca3af',background:'none',border:'none',cursor:'pointer'}}>지우기</button>
+            <button onClick={()=>setErrors([])}
+              style={{fontSize:11,color:'#9ca3af',background:'none',border:'none',cursor:'pointer',padding:'2px 6px'}}>
+              전체 닫기
+            </button>
           </div>
-          {errors.map((e,i)=>(
-            <div key={i} style={{fontSize:11,color:'#dc2626',marginBottom:2}}>• {e}</div>
+          {errors.map((err,i)=>(
+            <div key={i} style={{display:'flex',alignItems:'center',gap:6,padding:'4px 0',borderBottom:i<errors.length-1?'1px solid #fee2e2':'none'}}>
+              <span style={{fontSize:11,color:'#dc2626',flex:1}}>• {err.msg}</span>
+              {err.rfid && results[err.rfid] && (
+                <button onClick={()=>{ setResults(p=>{const n={...p};delete n[err.rfid];return n}); setErrors(p=>p.filter((_,j)=>j!==i)) }}
+                  style={{fontSize:10,padding:'2px 6px',background:'#fee2e2',border:'1px solid #fca5a5',borderRadius:4,cursor:'pointer',color:'#dc2626',whiteSpace:'nowrap'}}>
+                  데이터 삭제
+                </button>
+              )}
+              <button onClick={()=>setErrors(p=>p.filter((_,j)=>j!==i))}
+                style={{fontSize:10,padding:'2px 6px',background:'#f3f4f6',border:'1px solid #e5e7eb',borderRadius:4,cursor:'pointer',color:'#6b7280'}}>
+                닫기
+              </button>
+            </div>
           ))}
         </div>
       )}
