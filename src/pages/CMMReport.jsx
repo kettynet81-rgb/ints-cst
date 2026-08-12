@@ -49,17 +49,19 @@ function parseCMM(data) {
 
 function fillReport(templateData, cmmResults) {
   const wb = XLSX.read(templateData, { type: 'array', cellStyles: true, cellFormula: true })
+  const sheets = wb.SheetNames
   const ws2 = wb.Sheets['2 CASSETTE CHECK POINT']
   const ws3 = wb.Sheets['3 CASSETTE CHECK POINT']
   const ws4 = wb.Sheets['4 SLIDER']
-  if (!ws4 || !ws2) return null
+  if (!ws4) throw new Error(`'4 SLIDER' 시트 없음 (있는 시트: ${sheets.join(', ')})`)
+  if (!ws2) throw new Error(`'2 CASSETTE CHECK POINT' 시트 없음 (있는 시트: ${sheets.join(', ')})`)
 
   const rows4 = XLSX.utils.sheet_to_json(ws4, { header: 1, defval: '' })
   let hdr4 = -1
   for (let i = 0; i < rows4.length; i++) {
     if (String(rows4[i][1]).includes('순번')) { hdr4 = i; break }
   }
-  if (hdr4 < 0) return null
+  if (hdr4 < 0) throw new Error("'4 SLIDER' 시트에서 '순번' 행을 찾을 수 없음")
 
   const rfidSeq = {}
   for (let i = hdr4 + 1; i < rows4.length; i++) {
@@ -321,7 +323,6 @@ export default function CMMReport() {
     if (!template) { alert('성적서 양식을 먼저 업로드해주세요'); return }
     try {
       const out = fillReport(template, results)
-      if (!out) { alert('오류: 시트 구조를 확인해주세요'); return }
       const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
 
       // showSaveFilePicker 지원 시 저장위치/파일명 선택
