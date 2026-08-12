@@ -114,44 +114,52 @@ async function fillReport(templateData, cmmResults) {
     sharedStrings = [...ssXml.matchAll(/<t>([^<]*)<\/t>/g)].map(m=>m[1])
   }
 
+  // sharedStrings에서 '순번' 인덱스 찾기
+  const junbunIdx = sharedStrings.indexOf('순번')
+
   // 4 SLIDER XML 분석 - RFID → 순번 매핑
   let s4xml = await zip.file(s4path).async('text')
   const rfidSeq = {}
-  // 행별로 파싱
   const rowMatches = [...s4xml.matchAll(/<row[^>]+r="(\d+)"[^>]*>([\s\S]*?)<\/row>/g)]
   let hdrRow4 = -1
   for (const rm of rowMatches) {
     const rowNum = Number(rm[1])
     const rowContent = rm[2]
-    // 순번 헤더 행 찾기
-    if (hdrRow4 < 0 && rowContent.includes('순번')) { hdrRow4 = rowNum; continue }
+    // 순번 헤더 행 찾기 - sharedString 인덱스 또는 직접 텍스트
+    if (hdrRow4 < 0 && (
+      rowContent.includes('>순번<') ||
+      (junbunIdx >= 0 && rowContent.includes(`<v>${junbunIdx}</v>`))
+    )) { hdrRow4 = rowNum; continue }
     if (hdrRow4 < 0) continue
-    // RFID 셀 (D열=col4) 값
-    const rfidCellMatch = rowContent.match(/<c r="D\d+"[^>]*t="s"[^>]*><v>(\d+)<\/v><\/c>/)
-    if (rfidCellMatch) {
-      const rfid = sharedStrings[Number(rfidCellMatch[1])] || ''
-      // 순번 셀 (B열=col2)
+    // RFID 셀 (D열) - sharedString 참조
+    const rfidMatch = rowContent.match(/<c r="D\d+"[^>]*t="s"[^>]*><v>(\d+)<\/v><\/c>/)
+    if (rfidMatch) {
+      const rfid = sharedStrings[Number(rfidMatch[1])] || ''
       const seqMatch = rowContent.match(/<c r="B\d+"[^>]*><v>([\d.]+)<\/v><\/c>/)
       if (rfid.startsWith('IF') && seqMatch) rfidSeq[rfid] = Number(seqMatch[1])
     }
   }
-  if (hdrRow4 < 0) throw new Error("'4 SLIDER' 시트에서 '순번' 행을 찾을 수 없음")
+  if (hdrRow4 < 0) throw new Error(`'4 SLIDER' 순번 행 없음 (sharedStrings에서 '순번' 인덱스: ${junbunIdx})`)
+
 
   // 2 CASSETTE CHECK POINT 헤더 행 찾기
   let s2xml = await zip.file(s2path).async('text')
   const rowMatches2 = [...s2xml.matchAll(/<row[^>]+r="(\d+)"[^>]*>([\s\S]*?)<\/row>/g)]
   let hdrRow2 = -1
   for (const rm of rowMatches2) {
-    if (rm[2].includes('순번')) { hdrRow2 = Number(rm[1]); break }
+    const rc = rm[2]
+    if (rc.includes('>순번<') || (junbunIdx >= 0 && rc.includes(`<v>${junbunIdx}</v>`)))
+      { hdrRow2 = Number(rm[1]); break }
   }
   if (hdrRow2 < 0) throw new Error("'2 CASSETTE CHECK POINT' 순번 행 없음")
 
-  // 3 CASSETTE CHECK POINT
   let s3xml = s3path ? await zip.file(s3path).async('text') : null
   let hdrRow3 = -1
   if (s3xml) {
     for (const rm of [...s3xml.matchAll(/<row[^>]+r="(\d+)"[^>]*>([\s\S]*?)<\/row>/g)]) {
-      if (rm[2].includes('순번')) { hdrRow3 = Number(rm[1]); break }
+      const rc = rm[2]
+      if (rc.includes('>순번<') || (junbunIdx >= 0 && rc.includes(`<v>${junbunIdx}</v>`)))
+        { hdrRow3 = Number(rm[1]); break }
     }
   }
 
