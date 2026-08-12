@@ -95,22 +95,13 @@ function fillReport(templateData, cmmResults) {
       }
     }
   }
-
-  // 4 SLIDER 시트 - F→A, ?→B 매핑
-  if (ws4) {
-    const rows4 = XLSX.utils.sheet_to_json(ws4, { header: 1, defval: '' })
-    let hdr4 = -1
-    for (let i = 0; i < rows4.length; i++) {
-      if (String(rows4[i][1]).includes('순번')) { hdr4 = i; break }
-    }
+  }
     if (hdr4 >= 0) {
       const rfidMap4 = {}
       for (let i = hdr4 + 1; i < rows4.length; i++) {
         const rfid = String(rows4[i][3] || '').trim()
         if (rfid.startsWith('IF')) rfidMap4[rfid] = i
       }
-      // 4 SLIDER 시트는 별도 측정값 사용 (현재 자동입력 없음)
-    }
   }
 
   return XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
