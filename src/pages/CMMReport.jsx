@@ -293,14 +293,37 @@ export default function CMMReport() {
   const stopWatch = () => { clearInterval(intervalRef.current); setWatching(false); setStatus('감시 중지') }
   useEffect(() => () => clearInterval(intervalRef.current), [])
 
-  const download = () => {
+  const download = async () => {
     if (!template) { alert('성적서 양식을 먼저 업로드해주세요'); return }
-    const out = fillReport(template, results)
-    if (!out) { alert('오류: 시트 구조를 확인해주세요'); return }
-    const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a'); a.href = url; a.download = '검사성적서_완성.xlsx'; a.click()
-    URL.revokeObjectURL(url)
+    try {
+      const out = fillReport(template, results)
+      if (!out) { alert('오류: 시트 구조를 확인해주세요'); return }
+      const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+
+      // showSaveFilePicker 지원 시 저장위치/파일명 선택
+      if (window.showSaveFilePicker) {
+        try {
+          const fh = await window.showSaveFilePicker({
+            suggestedName: templateName.replace(/\.xlsx?$/i,'') + '_완성.xlsx',
+            types: [{ description: 'Excel', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] } }]
+          })
+          const writable = await fh.createWritable()
+          await writable.write(blob)
+          await writable.close()
+          return
+        } catch(e) { if (e.name === 'AbortError') return }
+      }
+      // 폴백
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = templateName.replace(/\.xlsx?$/i,'') + '_완성.xlsx'
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch(e) {
+      alert('다운로드 오류: ' + e.message)
+      console.error(e)
+    }
   }
 
   const displayList = rfidOrder.length > 0 ? rfidOrder : Object.keys(results).sort()
