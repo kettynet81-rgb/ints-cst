@@ -1,16 +1,41 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import * as XLSX from 'xlsx'
 
+// 항목명 정규화 (신형→표준)
+function normalizeKey(k) {
+  return String(k).trim()
+    .replace('B1','B-1').replace('B2','B-2')
+    .replace('D(R)','D').replace('D1','D-1').replace('D2','D-2').replace('D3','D-3')
+    .replace('E-1(L)','E-1L').replace('E-2(R)','E-1R')
+    .replace('F-1(L)','F-1L').replace('F-2(R)','F-1R')
+}
+
 function parseCMM(data) {
   const wb = XLSX.read(data, { type: 'array' })
+  const vals = {}
+
+  // 신형: Result 시트 있으면
+  if (wb.SheetNames.includes('Result')) {
+    const ws = wb.Sheets['Result']
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
+    for (let i = 0; i < rows.length; i++) {
+      const item = String(rows[i][0] || '').trim()
+      const actual = rows[i][2]
+      if (item && typeof actual === 'number') {
+        vals[normalizeKey(item)] = Number(actual.toFixed(4))
+      }
+    }
+    return vals
+  }
+
+  // 구형: DS 행 방식
   const ws = wb.Sheets[wb.SheetNames[0]]
   const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
-  const vals = {}
   for (let i = 0; i < rows.length; i++) {
     const item = String(rows[i][1] || '').trim()
     const next = rows[i + 1]
     if (item && next && String(next[1]).trim() === 'DS') {
-      vals[item] = Number(Number(next[2]).toFixed(4))
+      vals[normalizeKey(item)] = Number(Number(next[2]).toFixed(4))
       i++
     }
   }
