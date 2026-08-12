@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import * as XLSX from 'xlsx'
+import ExcelJS from 'exceljs'
 
 // 항목명 정규화 (신형→표준)
 function normalizeKey(k) {
@@ -47,62 +48,68 @@ function parseCMM(data) {
   return vals
 }
 
-function fillReport(templateData, cmmResults) {
-  const wb = XLSX.read(new Uint8Array(templateData), { type: 'array' })
-  const sheets = wb.SheetNames
-  const ws2 = wb.Sheets['2 CASSETTE CHECK POINT']
-  const ws3 = wb.Sheets['3 CASSETTE CHECK POINT']
-  const ws4 = wb.Sheets['4 SLIDER']
-  if (!ws4) throw new Error(`'4 SLIDER' 시트 없음 (있는 시트: ${sheets.join(', ')})`)
-  if (!ws2) throw new Error(`'2 CASSETTE CHECK POINT' 시트 없음 (있는 시트: ${sheets.join(', ')})`)
+async function fillReport(templateData, cmmResults) {
+  const wb = new ExcelJS.Workbook()
+  await wb.xlsx.load(templateData)
 
-  const rows4 = XLSX.utils.sheet_to_json(ws4, { header: 1, defval: '' })
+  const sheetNames = wb.worksheets.map(s=>s.name)
+  const ws4 = wb.getWorksheet('4 SLIDER')
+  const ws2 = wb.getWorksheet('2 CASSETTE CHECK POINT')
+  const ws3 = wb.getWorksheet('3 CASSETTE CHECK POINT')
+
+  if (!ws4) throw new Error(`'4 SLIDER' 시트 없음 (있는 시트: ${sheetNames.join(', ')})`)
+  if (!ws2) throw new Error(`'2 CASSETTE CHECK POINT' 시트 없음`)
+
+  // 4 SLIDER에서 RFID → 순번 매핑
   let hdr4 = -1
-  for (let i = 0; i < rows4.length; i++) {
-    if (rows4[i].some(v => String(v).includes('순번'))) { hdr4 = i; break }
-  }
+  ws4.eachRow((row, ri) => {
+    if (hdr4 < 0 && row.values.some(v => String(v||'').includes('순번'))) hdr4 = ri
+  })
   if (hdr4 < 0) throw new Error("'4 SLIDER' 시트에서 '순번' 행을 찾을 수 없음")
 
   const rfidSeq = {}
-  for (let i = hdr4 + 1; i < rows4.length; i++) {
-    const rfid = String(rows4[i][3] || '').trim()
-    const seq = rows4[i][1]
+  ws4.eachRow((row, ri) => {
+    if (ri <= hdr4) return
+    const rfid = String(row.getCell(4).value || '').trim()
+    const seq = row.getCell(2).value
     if (rfid.startsWith('IF') && seq) rfidSeq[rfid] = Number(seq)
-  }
+  })
 
-  const getHdr = (ws) => {
-    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
-    for (let i = 0; i < rows.length; i++) {
-      if (rows[i].some(v => String(v).includes('순번'))) return i
-    }
-    return -1
+  // 헤더 행 찾기
+  const getHdrRow = (ws) => {
+    let hdr = -1
+    ws.eachRow((row, ri) => {
+      if (hdr < 0 && row.values.some(v => String(v||'').includes('순번'))) hdr = ri
+    })
+    return hdr
   }
-  const hdr2 = getHdr(ws2)
-  const hdr3 = ws3 ? getHdr(ws3) : -1
+  const hdr2 = getHdrRow(ws2)
+  const hdr3 = ws3 ? getHdrRow(ws3) : -1
 
+  // CMM 값 채우기
   for (const [rfid, vals] of Object.entries(cmmResults)) {
     const seq = rfidSeq[rfid]
     if (!seq) continue
+
+    // 2 CASSETTE CHECK POINT: A(5), B(6), B-1(7), B-2(8), C(9), D(10), D-1(11), D-2(12), D-3(13)
     const ri2 = hdr2 + seq
-    const colMap2 = { 'A':4, 'B':5, 'B-1':6, 'B-2':7, 'C':8, 'D':9, 'D-1':10, 'D-2':11, 'D-3':12 }
+    const colMap2 = { 'A':5, 'B':6, 'B-1':7, 'B-2':8, 'C':9, 'D':10, 'D-1':11, 'D-2':12, 'D-3':13 }
     for (const [item, col] of Object.entries(colMap2)) {
-      if (vals[item] !== undefined) {
-        const addr2 = XLSX.utils.encode_cell({ r: ri2, c: col })
-        ws2[addr2] = { ...(ws2[addr2]||{}), t: 'n', v: vals[item], f: undefined }
-      }
+      if (vals[item] !== undefined) ws2.getRow(ri2).getCell(col).value = vals[item]
     }
-    if (ws3 && hdr3 >= 0) {
+
+    // 3 CASSETTE CHECK POINT
+    if (ws3 && hdr3 > 0) {
       const ri3 = hdr3 + seq
-      const colMap3 = { 'E-1L':4, 'E-1R':5, 'F-1L':6, 'F-1R':7 }
+      const colMap3 = { 'E-1L':5, 'E-1R':6, 'F-1L':7, 'F-1R':8 }
       for (const [item, col] of Object.entries(colMap3)) {
-        if (vals[item] !== undefined) {
-          const addr3 = XLSX.utils.encode_cell({ r: ri3, c: col })
-          ws3[addr3] = { ...(ws3[addr3]||{}), t: 'n', v: vals[item], f: undefined }
-        }
+        if (vals[item] !== undefined) ws3.getRow(ri3).getCell(col).value = vals[item]
       }
     }
   }
-  return XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+
+  const buf = await wb.xlsx.writeBuffer()
+  return buf
 }
 
 const COLS = [
@@ -322,7 +329,7 @@ export default function CMMReport() {
   const download = async () => {
     if (!template) { alert('성적서 양식을 먼저 업로드해주세요'); return }
     try {
-      const out = fillReport(template, results)
+      const out = await fillReport(template, results)
       const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
 
       // showSaveFilePicker 지원 시 저장위치/파일명 선택
