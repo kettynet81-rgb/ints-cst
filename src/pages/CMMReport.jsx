@@ -153,28 +153,33 @@ export default function CMMReport() {
     }
   }, [])
 
-  // 폴더 선택 + 실시간 감시 시작
+  const [folderName, setFolderName] = useState('')
+
+  // 폴더만 선택 (감시 시작 X)
   const selectFolder = async () => {
-    if (!window.showDirectoryPicker) {
-      alert('폴더 선택은 Chrome/Edge에서만 지원됩니다')
-      return
-    }
+    if (!window.showDirectoryPicker) { alert('Chrome/Edge에서만 지원됩니다'); return }
     try {
       const dirHandle = await window.showDirectoryPicker()
       dirHandleRef.current = dirHandle
-      processedRef.current = new Set()
-      setProcessing(true)
-      setStatus('폴더 읽는 중...')
-      await scanFolder(dirHandle)
-      setProcessing(false)
-      setWatching(true)
-      setStatus('✅ 폴더 감시 중 (10초마다 자동 업데이트)')
-      // 10초마다 새 파일 체크
-      intervalRef.current = setInterval(() => scanFolder(dirHandle), 10000)
+      setFolderName(dirHandle.name)
+      setStatus('폴더 선택됨: ' + dirHandle.name)
     } catch(e) {
       if (e.name !== 'AbortError') alert('오류: ' + e.message)
-      setProcessing(false)
     }
+  }
+
+  // 시작 버튼 - 즉시 읽기 + 10초마다 자동 감시
+  const startWatch = async () => {
+    if (!dirHandleRef.current) { alert('폴더를 먼저 선택해주세요'); return }
+    processedRef.current = new Set()
+    setProcessing(true)
+    setStatus('파일 읽는 중...')
+    await scanFolder(dirHandleRef.current)
+    setProcessing(false)
+    setWatching(true)
+    setStatus('✅ 감시 중 (10초마다 자동 업데이트)')
+    clearInterval(intervalRef.current)
+    intervalRef.current = setInterval(() => scanFolder(dirHandleRef.current), 10000)
   }
 
   // 감시 중지
@@ -259,14 +264,19 @@ export default function CMMReport() {
           <span style={{fontSize:11,color:'#6b7280',fontWeight:400,marginLeft:8}}>여러 파일 동시 선택 가능</span>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+          <button onClick={selectFolder}
+            style={{padding:'7px 16px',background:'#7c3aed',color:'#fff',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700,border:'none'}}>
+            📁 폴더 선택
+          </button>
+          {folderName && <span style={{fontSize:12,color:'#374151',fontWeight:600}}>📂 {folderName}</span>}
           {!watching
-            ? <button onClick={selectFolder} disabled={processing}
-                style={{padding:'7px 16px',background:'#7c3aed',color:'#fff',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700,border:'none'}}>
-                📁 폴더 선택 (자동 감시)
+            ? <button onClick={startWatch} disabled={!folderName||processing}
+                style={{padding:'7px 16px',background:folderName?'#16a34a':'#d1d5db',color:'#fff',borderRadius:6,cursor:folderName?'pointer':'not-allowed',fontSize:12,fontWeight:700,border:'none'}}>
+                ▶ 시작
               </button>
             : <button onClick={stopWatch}
                 style={{padding:'7px 16px',background:'#dc2626',color:'#fff',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700,border:'none'}}>
-                ⏹ 감시 중지
+                ⏹ 중지
               </button>
           }
 
