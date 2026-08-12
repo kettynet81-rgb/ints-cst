@@ -94,20 +94,17 @@ export default function CMMReport() {
   const [watching, setWatching]     = useState(false)
   const [folderName, setFolderName] = useState('')
   const dirHandleRef = useRef(null)
+  const folderFilesRef = useRef([])
   const intervalRef  = useRef(null)
 
-  // 폴더 스캔 (새 파일도 덮어씌움)
-  const scanFolder = useCallback(async (dirHandle) => {
+  // 파일 배열 스캔
+  const scanFiles = useCallback(async (files) => {
     const newResults = {}
     let count = 0
-    for await (const entry of dirHandle.values()) {
-      if (entry.kind !== 'file') continue
-      const name = entry.name.toLowerCase()
-      if (!name.endsWith('.xls') && !name.endsWith('.xlsx')) continue
-      const rfid = entry.name.replace(/\.[^.]+$/, '').trim()
-      const file = await entry.getFile()
-      const buf = await file.arrayBuffer()
+    for (const file of files) {
+      const rfid = file.name.replace(/\.[^.]+$/, '').trim()
       try {
+        const buf = await file.arrayBuffer()
         const vals = parseCMM(new Uint8Array(buf))
         newResults[rfid] = vals
         count++
@@ -120,27 +117,29 @@ export default function CMMReport() {
     return count
   }, [])
 
-  // 폴더 선택
-  const selectFolder = async () => {
-    if (!window.showDirectoryPicker) { alert('Chrome/Edge에서만 지원됩니다'); return }
-    try {
-      const dirHandle = await window.showDirectoryPicker()
-      dirHandleRef.current = dirHandle
-      setFolderName(dirHandle.name)
-      setStatus('폴더 선택됨: ' + dirHandle.name)
-      setResults({})
-    } catch(e) { if (e.name !== 'AbortError') alert('오류: ' + e.message) }
+  // 폴더 선택 (webkitdirectory)
+  const onFolderSelect = (e) => {
+    const files = Array.from(e.target.files).filter(f => f.name.match(/\.xls[x]?$/i))
+    if (files.length === 0) return
+    // 폴더명 추출
+    const path = files[0].webkitRelativePath
+    const folderN = path.split('/')[0]
+    setFolderName(folderN)
+    setStatus('폴더 선택됨: ' + folderN + ' (' + files.length + '개 파일)')
+    folderFilesRef.current = files
+    setResults({})
   }
 
   // 시작
   const startWatch = async () => {
-    if (!dirHandleRef.current) { alert('폴더를 먼저 선택해주세요'); return }
+    if (!folderFilesRef.current.length) { alert('폴더를 먼저 선택해주세요'); return }
     setProcessing(true)
-    await scanFolder(dirHandleRef.current)
+    await scanFiles(folderFilesRef.current)
     setProcessing(false)
     setWatching(true)
     clearInterval(intervalRef.current)
-    intervalRef.current = setInterval(() => scanFolder(dirHandleRef.current), 10000)
+    // 10초마다 폴더 파일 목록 다시 읽기 (input은 스냅샷이라 실시간 감지 불가, 안내)
+    setStatus('✅ 파일 읽기 완료 (새 파일 추가 시 폴더 다시 선택)')
   }
 
   // 중지
@@ -197,10 +196,10 @@ export default function CMMReport() {
           {watching && <span style={{marginLeft:8,fontSize:11,color:'#16a34a',fontWeight:400}}>● 감시 중 (10초마다 자동 업데이트)</span>}
         </div>
         <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
-          <button onClick={selectFolder}
-            style={{padding:'7px 16px',background:'#7c3aed',color:'#fff',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700,border:'none'}}>
+          <label style={{padding:'7px 16px',background:'#7c3aed',color:'#fff',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700}}>
             📁 폴더 선택
-          </button>
+            <input type="file" webkitdirectory="" multiple style={{display:'none'}} onChange={onFolderSelect}/>
+          </label>
           {folderName && <span style={{fontSize:12,color:'#374151',fontWeight:600}}>📂 {folderName}</span>}
           {!watching
             ? <button onClick={startWatch} disabled={!folderName||processing}
