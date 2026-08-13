@@ -140,8 +140,13 @@ async function fillReport(templateData, cmmResults) {
     }
   }
   if (hdrRow4 < 0) throw new Error(`'4 SLIDER' 순번 행 없음 (sharedStrings에서 '순번' 인덱스: ${junbunIdx})`)
+  
+  // 디버그: rfidSeq 확인
 
 
+  const rfidKeys = Object.keys(rfidSeq)
+  if (rfidKeys.length === 0) throw new Error(`RFID 매핑 실패: hdrRow4=${hdrRow4}, sharedStrings 길이=${sharedStrings.length}, 4SLIDER 총 행=${rowMatches.length}`)
+  
   // 2 CASSETTE는 4 SLIDER 기준 +1 오프셋 사용 (순번 셀 없음)
   let s2xml = await zip.file(s2path).async('text')
   let s3xml = s3path ? await zip.file(s3path).async('text') : null
