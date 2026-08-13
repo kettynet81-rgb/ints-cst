@@ -147,6 +147,10 @@ async function fillReport(templateData, cmmResults) {
   const rfidKeys = Object.keys(rfidSeq)
   if (rfidKeys.length === 0) throw new Error(`RFID 매핑 실패: hdrRow4=${hdrRow4}, sharedStrings 길이=${sharedStrings.length}, 4SLIDER 총 행=${rowMatches.length}`)
   
+  const cmmKeys = Object.keys(cmmResults)
+  const matched = cmmKeys.filter(r => rfidSeq[r] !== undefined)
+  alert(`디버그:\nCMM RFID: ${cmmKeys.join(', ')}\n성적서 RFID 샘플: ${rfidKeys.slice(0,3).join(', ')}\n매칭됨: ${matched.join(', ')}\nhdrRow4: ${hdrRow4}`)
+  
   // 2 CASSETTE는 4 SLIDER 기준 +1 오프셋 사용 (순번 셀 없음)
   let s2xml = await zip.file(s2path).async('text')
   let s3xml = s3path ? await zip.file(s3path).async('text') : null
