@@ -194,6 +194,10 @@ async function fillReport(templateData, cmmResults) {
     }
   }
 
+  // 변경 확인
+  const changed2 = Object.entries(cmmResults).filter(([rfid]) => rfidSeq[rfid]).length
+  const sample = s2xml.includes('<v>999.9999</v>') ? '테스트값 있음' : '없음'
+  alert(`s2xml 길이: ${s2xml.length}\n처리된 RFID: ${changed2}개\ns2path: ${s2path}`)
   zip.file(s2path, s2xml)
   if (s3xml && s3path) zip.file(s3path, s3xml)
 
