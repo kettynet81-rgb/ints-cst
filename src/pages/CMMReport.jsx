@@ -68,106 +68,112 @@ function patchCell(xml, cellAddr, value) {
 
 // XLSX를 JSZip으로 열어서 특정 셀만 패치 후 원본 그대로 저장
 async function fillReport(templateData, cmmResults) {
-  // XLSX.js로 읽기 (셀 v값만 수정, 나머지 보존)
-  const wb = XLSX.read(new Uint8Array(templateData), { type: 'array', cellStyles: true })
-  const sheetNames = wb.SheetNames
+  const zip = await JSZip.loadAsync(templateData)
 
-  const ws4 = wb.Sheets['4 SLIDER']
-  const ws2 = wb.Sheets['2 CASSETTE CHECK POINT']
-  const ws3 = wb.Sheets['3 CASSETTE CHECK POINT']
+  // workbook.xml 텍스트에서 시트명→파일 직접 추출
+  const wbXml = await zip.file('xl/workbook.xml').async('text')
+  const wbRels = await zip.file('xl/_rels/workbook.xml.rels').async('text')
 
-  if (!ws4) throw new Error(`'4 SLIDER' 시트 없음 (있는: ${sheetNames.join(', ')})`)
-  if (!ws2) throw new Error(`'2 CASSETTE CHECK POINT' 시트 없음`)
+  // name="시트명" ... r:id="rIdN" 또는 r:id="rIdN" ... name="시트명"
+  const nameRidMap = {}
+  for (const m of wbXml.matchAll(/name="([^"]+)"[^<]*?r:id="(rId\d+)"/g)) nameRidMap[m[1]] = m[2]
+  for (const m of wbXml.matchAll(/r:id="(rId\d+)"[^<]*?name="([^"]+)"/g)) nameRidMap[m[2]] = m[1]
 
-  // 4 SLIDER에서 RFID → 행번호 매핑
-  const range4 = XLSX.utils.decode_range(ws4['!ref'])
-  const rfidRow = {} // rfid → actual excel row number (1-based)
+  const ridPathMap = {}
+  for (const m of wbRels.matchAll(/Id="(rId\d+)"[^<]*?Target="([^"]+)"/g)) {
+    ridPathMap[m[1]] = m[2].startsWith('worksheets') ? 'xl/' + m[2] : m[2]
+  }
+
+  const getPath = name => {
+    const rid = nameRidMap[name]
+    return rid ? ridPathMap[rid] : null
+  }
+
+  const s4path = getPath('4 SLIDER')
+  const s2path = getPath('2 CASSETTE CHECK POINT')
+  const s3path = getPath('3 CASSETTE CHECK POINT')
+  const allNames = Object.keys(nameRidMap).join(', ')
+
+  if (!s4path) throw new Error(`'4 SLIDER' 없음. 있는 시트: ${allNames}`)
+  if (!s2path) throw new Error(`'2 CASSETTE CHECK POINT' 없음`)
+
+  // sharedStrings
+  const ssXml = await zip.file('xl/sharedStrings.xml').async('text')
+  const sharedStrings = [...ssXml.matchAll(/<t[^>]*>([^<]*)<\/t>/g)].map(m => m[1])
+
+  // 4 SLIDER에서 RFID→행번호
+  const s4xml = await zip.file(s4path).async('text')
+  const rows4 = [...s4xml.matchAll(/<row[^>]+r="(\d+)"[^>]*>([\s\S]*?)<\/row>/g)]
+  
   let hdrRow4 = -1
+  const rfidRow = {}
 
-  for (let r = range4.s.r; r <= range4.e.r; r++) {
-    for (let c2 = range4.s.c; c2 <= range4.e.c; c2++) {
-      const cell = ws4[XLSX.utils.encode_cell({r, c: c2})]
-      if (cell && String(cell.v).includes('순번')) { hdrRow4 = r; break }
-    }
-    if (hdrRow4 >= 0) break
-  }
-  if (hdrRow4 < 0) throw new Error("'4 SLIDER'에서 순번 행 없음")
-
-  // RFID → 행 매핑 (D열 = col 3, 0-based)
-  for (let r = hdrRow4 + 1; r <= range4.e.r; r++) {
-    const rfidCell = ws4[XLSX.utils.encode_cell({r, c: 3})]
-    if (rfidCell && String(rfidCell.v).startsWith('IF')) {
-      rfidRow[String(rfidCell.v).trim()] = r
-    }
-  }
-
-  if (Object.keys(rfidRow).length === 0) throw new Error('4 SLIDER에서 RFID를 찾을 수 없음')
-
-  // 2 CASSETTE 헤더 행 찾기
-  const range2 = XLSX.utils.decode_range(ws2['!ref'])
-  let hdrRow2 = -1
-  for (let r = range2.s.r; r <= range2.e.r; r++) {
-    for (let c2 = range2.s.c; c2 <= range2.e.c; c2++) {
-      const cell = ws2[XLSX.utils.encode_cell({r, c: c2})]
-      if (cell && String(cell.v) === '1') {
-        // B열에 1이 있으면 데이터 시작 행
-        hdrRow2 = r - 1
-        break
+  for (const [, rn, rc] of rows4) {
+    const rowNum = Number(rn)
+    if (hdrRow4 < 0) {
+      // 순번 셀 찾기 (B열 t="s")
+      const bCell = rc.match(/<c r="B\d+" [^>]*t="s"[^>]*><v>(\d+)<\/v><\/c>/)
+      if (bCell && sharedStrings[Number(bCell[1])] === '순번') {
+        hdrRow4 = rowNum; continue
       }
+      continue
     }
-    if (hdrRow2 >= 0) break
+    // 데이터 행: D열에서 RFID 찾기
+    const dCell = rc.match(/<c r="D\d+" [^>]*t="s"[^>]*><v>(\d+)<\/v><\/c>/)
+    if (dCell) {
+      const rfid = sharedStrings[Number(dCell[1])] || ''
+      if (rfid.startsWith('IF')) rfidRow[rfid] = rowNum
+    }
   }
-  if (hdrRow2 < 0) hdrRow2 = hdrRow4 // fallback
+  if (hdrRow4 < 0) throw new Error(`4 SLIDER 순번 행 없음 (sharedStrings: ${sharedStrings.slice(0,5).join(',')})`)
+  if (!Object.keys(rfidRow).length) throw new Error(`4 SLIDER RFID 없음 (hdrRow4=${hdrRow4})`)
 
-  // 2 CASSETTE 컬럼: A=E(4), B=F(5), B-1=G(6), B-2=H(7), C=I(8), D=J(9), D-1=K(10), D-2=L(11), D-3=M(12)
-  const colMap2 = {'A':4,'B':5,'B-1':6,'B-2':7,'C':8,'D':9,'D-1':10,'D-2':11,'D-3':12}
-  const colMap3 = {'E-1L':4,'E-1R':5,'F-1L':6,'F-1R':7}
+  // 셀 값 교체 함수
+  const setCell = (xml, addr, val) => {
+    const replaced = xml.replace(
+      new RegExp('<c r="' + addr + '"[^>]*>[\\s\\S]*?<\/c>'),
+      '<c r="' + addr + '"><v>' + val + '</v></c>'
+    )
+    if (replaced !== xml) return replaced
+    // 셀 없으면 행에 추가
+    const row = addr.replace(/[A-Z]+/, '')
+    return xml.replace(
+      new RegExp('(<row[^>]+r="' + row + '"[^>]*>)([\\s\\S]*?)(<\/row>)'),
+      '$1$2<c r="' + addr + '"><v>' + val + '</v></c>$3'
+    )
+  }
 
-  // CMM 값 채우기
+  // 2/3 CASSETTE 컬럼 매핑
+  const colMap2 = {'A':'E','B':'F','B-1':'G','B-2':'H','C':'I','D':'J','D-1':'K','D-2':'L','D-3':'M'}
+  const colMap3 = {'E-1L':'E','E-1R':'F','F-1L':'G','F-1R':'H'}
+
+  let s2xml = await zip.file(s2path).async('text')
+  let s3xml = s3path ? await zip.file(s3path).async('text') : null
+
+  // 2 CASSETTE 데이터 시작 행: 4 SLIDER hdrRow4 기준 +2
+  const s2DataStart = hdrRow4 + 2
+
   for (const [rfid, vals] of Object.entries(cmmResults)) {
     const sliderRow = rfidRow[rfid]
     if (sliderRow === undefined) continue
+    const seq = sliderRow - hdrRow4 // 1-based offset
 
-    // 4 SLIDER에서의 순번 (1-based)
-    const seqCell = ws4[XLSX.utils.encode_cell({r: sliderRow, c: 1})]
-    const seq = seqCell ? Number(seqCell.v) : -1
-    if (seq < 0) continue
-
-    // 2 CASSETTE 대응 행
-    const ri2 = hdrRow2 + seq
+    const ri2 = s2DataStart + seq - 1
     for (const [item, col] of Object.entries(colMap2)) {
-      if (vals[item] === undefined) continue
-      const addr = XLSX.utils.encode_cell({r: ri2, c: col})
-      if (ws2[addr]) {
-        ws2[addr].v = vals[item]
-        ws2[addr].t = 'n'
-        delete ws2[addr].f // 수식 제거
-        delete ws2[addr].w // 캐시된 표시값 제거
-      } else {
-        ws2[addr] = {t:'n', v: vals[item]}
-      }
+      if (vals[item] !== undefined) s2xml = setCell(s2xml, col + ri2, vals[item])
     }
-
-    // 3 CASSETTE
-    if (ws3) {
-      const range3 = XLSX.utils.decode_range(ws3['!ref'])
-      const ri3 = hdrRow2 + seq // 같은 오프셋
+    if (s3xml) {
+      const ri3 = s2DataStart + seq - 1
       for (const [item, col] of Object.entries(colMap3)) {
-        if (vals[item] === undefined) continue
-        const addr = XLSX.utils.encode_cell({r: ri3, c: col})
-        if (ws3[addr]) {
-          ws3[addr].v = vals[item]
-          ws3[addr].t = 'n'
-          delete ws3[addr].f
-          delete ws3[addr].w
-        } else {
-          ws3[addr] = {t:'n', v: vals[item]}
-        }
+        if (vals[item] !== undefined) s3xml = setCell(s3xml, col + ri3, vals[item])
       }
     }
   }
 
-  return XLSX.write(wb, {bookType:'xlsx', type:'array'})
+  zip.file(s2path, s2xml)
+  if (s3xml && s3path) zip.file(s3path, s3xml)
+
+  return zip.generateAsync({type:'arraybuffer', compression:'DEFLATE'})
 }
 
 const COLS = [
