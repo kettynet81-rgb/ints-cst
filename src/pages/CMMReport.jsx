@@ -362,6 +362,7 @@ export default function CMMReport() {
       if (entry.kind !== 'file') continue
       if (!entry.name.match(/\.xls[x]?$/i)) continue
       const rfid = entry.name.replace(/\.[^.]+$/, '').trim()
+      if (!rfid.match(/^[A-Z]{2,4}\d{3,}/)) continue // RFID 형식만 처리
       try {
         const file = await entry.getFile()
         const buf = await file.arrayBuffer()
