@@ -163,17 +163,16 @@ async function fillReport(templateData, cmmResults) {
   // 셀 패치 함수 - 행이 없으면 새로 추가
   const setCellValue = (xml, rowNum, col, value) => {
     const addr = `${col}${rowNum}`
-    // 기존 셀 교체 시도
-    const cellRe = new RegExp(`(<c r="${addr}"[^>]*(?:t="[^"]*")?[^>]*>)[\s\S]*?(<\/c>)`)
-    if (cellRe.test(xml)) {
-      return xml.replace(cellRe, `<c r="${addr}"><v>${value}</v></c>`)
-    }
-    // 셀이 없으면 행 안에 추가
-    const rowRe = new RegExp(`(<row[^>]+r="${rowNum}"[^>]*>)([\s\S]*?)(<\/row>)`)
-    if (rowRe.test(xml)) {
-      return xml.replace(rowRe, `$1$2<c r="${addr}"><v>${value}</v></c>$3`)
-    }
-    return xml
+    const v = String(value)
+    const replaced = xml.replace(
+      new RegExp('<c r="' + addr + '"[^>]*>[\s\S]*?<\/c>'),
+      '<c r="' + addr + '"><v>' + v + '<\/v><\/c>'
+    )
+    if (replaced !== xml) return replaced
+    return xml.replace(
+      new RegExp('(<row[^>]+r="' + rowNum + '"[^>]*>)([\s\S]*?)(<\/row>)'),
+      '$1$2<c r="' + addr + '"><v>' + v + '<\/v><\/c>$3'
+    )
   }
 
   for (const [rfid, vals] of Object.entries(cmmResults)) {
