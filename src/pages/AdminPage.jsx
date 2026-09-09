@@ -4,6 +4,7 @@ import { collection, onSnapshot, doc, updateDoc, getDocs, writeBatch,
          query, where, addDoc, deleteDoc, orderBy, serverTimestamp, Timestamp } from "firebase/firestore"
 import { useAuth } from "../contexts/AuthContext"
 import { ITEMS } from "../data/items"
+import BackupRestore from "./BackupRestore"
 
 const ROLE_LABEL = { pending:"대기", approved:"승인", admin:"관리자", rejected:"거절", blocked:"차단" }
 
@@ -365,6 +366,9 @@ export default function AdminPage() {
 
   return (
     <div style={{padding:28}}>
+      {/* 데이터 백업 / 복원 */}
+      <BackupRestore />
+
       {/* 리콜 전체 삭제 */}
       <div style={{marginBottom:12,padding:'12px 14px',background:'#fee2e2',border:'1px solid #fca5a5',borderRadius:8,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
         <div>
