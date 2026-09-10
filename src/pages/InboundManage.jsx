@@ -41,7 +41,7 @@ export default function InboundManage({ transactions }) {
     .sort((a,b) => b.date.localeCompare(a.date) || (b.createdAt?.seconds||0)-(a.createdAt?.seconds||0))
 
   const [form, setForm]     = useState({ date: today(), itemCode:'', quantity:'', memo:'' })
-  const [saving, setSaving] = useState(false)
+  const [pending, setPending] = useState(0)
   const [saved,  setSaved]  = useState(false)
   const [err,    setErr]    = useState('')
   const { userData } = useAuth()
@@ -72,17 +72,26 @@ export default function InboundManage({ transactions }) {
   useEffect(() => { codeRef.current?.focus() }, [])
   useEffect(() => { setSugIdx(0) }, [form.itemCode])
 
-  // 품목코드 확정: 숫자만 입력하면 A 자동 추가
-  const finalizeCode = (v) => {
+  // 품목코드 정규화: 숫자만 입력하면 A 자동 추가
+  const normalizeCode = (v) => {
     let val = (v || '').trim().toUpperCase()
     if (/^\d+$/.test(val)) val = 'A' + val
-    setF('itemCode', val)
+    return val
+  }
+
+  // 확정. setForm 은 항상 함수형으로 — 포커스 이동으로 blur 가 먼저 끼어들어도
+  // 예전 값이 최신 값을 덮어쓰지 않게 한다.
+  const finalizeCode = (v) => {
+    const val = normalizeCode(v)
+    setForm(f => ({ ...f, itemCode: val }))
     return ITEMS.find(i => i.code === val) || null
   }
 
+  const finalizeCodeFromState = () => setForm(f => ({ ...f, itemCode: normalizeCode(f.itemCode) }))
+
   const pickSuggestion = (code) => {
     setF('itemCode', code)
-    setTimeout(() => qtyRef.current?.focus(), 0)
+    focusQty()
   }
 
   // 빈 칸이 있으면 저장 대신 그 칸으로 이동 (Enter 하나로 이동+저장)
@@ -93,34 +102,56 @@ export default function InboundManage({ transactions }) {
     return false
   }
 
-  const handleSave = async (codeOverride) => {
+  // 포커스는 반드시 동기적으로 옮긴다.
+  // setTimeout 으로 미루면 빠르게 타이핑할 때 다음 글자가 이전 칸에 들어간다.
+  const focusNow = (ref) => {
+    const go = () => ref.current?.focus()
+    go()
+    requestAnimationFrame(go)
+  }
+  const focusCode = () => focusNow(codeRef)
+  const focusQty  = () => focusNow(qtyRef)
+
+  // 저장은 네트워크를 기다리지 않는다 — 입력칸을 바로 비우고 포커스를 되돌려
+  // 다음 건을 곧바로 입력할 수 있게 하고, 실제 쓰기는 뒤에서 진행한다.
+  const handleSave = (codeOverride) => {
     const code = (codeOverride || form.itemCode).trim().toUpperCase()
     const found = ITEMS.find(i => i.code === code)
     const dateVal = parseDate(form.date)
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dateVal)) { setErr('날짜 형식을 확인하세요 (예: 7/5, 0705)'); dateRef.current?.focus(); return }
     if (!found || !form.quantity || Number(form.quantity) <= 0) return
 
-    setErr(''); setSaving(true)
-    try {
-      await addDoc(collection(db, 'transactions'), {
-        type:'입고', date:dateVal,
-        itemCode:found.code, itemName:found.name,
-        quantity:Number(form.quantity), memo:form.memo.trim(),
-        createdAt:serverTimestamp(),
-      })
-      await writeLog({ action:'입력', target:'입고기록', docId:'',
-        after:{ date:dateVal, itemCode:found.code, itemName:found.name, quantity:Number(form.quantity), memo:form.memo },
-        user: userData?.name||'알수없음' })
-      // 날짜는 유지 — 같은 날짜로 연속 입력하는 흐름
-      setForm({ date:dateVal, itemCode:'', quantity:'', memo:'' })
-      setSaved(true)
-      setTimeout(() => setSaved(false), 1200)
-    } catch (e) {
-      setErr('저장 실패: ' + e.message)
-    } finally {
-      setSaving(false)
-      setTimeout(() => codeRef.current?.focus(), 0)
+    const snapshot = { ...form }
+    const payload = {
+      type:'입고', date:dateVal,
+      itemCode:found.code, itemName:found.name,
+      quantity:Number(form.quantity), memo:form.memo.trim(),
     }
+
+    // 1) 화면부터 즉시 비우고 커서 복귀
+    setErr('')
+    setForm({ date:dateVal, itemCode:'', quantity:'', memo:'' })
+    setSaved(true)
+    setTimeout(() => setSaved(false), 1200)
+    focusCode()
+
+    // 2) 실제 저장은 뒤에서
+    setPending(n => n + 1)
+    ;(async () => {
+      try {
+        await addDoc(collection(db, 'transactions'), { ...payload, createdAt:serverTimestamp() })
+        await writeLog({ action:'입력', target:'입고기록', docId:'',
+          after:{ date:dateVal, itemCode:found.code, itemName:found.name, quantity:payload.quantity, memo:payload.memo },
+          user: userData?.name||'알수없음' })
+      } catch (e) {
+        // 실패하면 입력값을 되돌려 다시 저장할 수 있게
+        setErr(`저장 실패 (${found.code} ${payload.quantity}EA) — 입력값을 복구했습니다: ${e.message}`)
+        setForm(snapshot)
+        focusCode()
+      } finally {
+        setPending(n => Math.max(0, n - 1))
+      }
+    })()
   }
 
   // Enter = 저장. 빈 칸이 남아 있으면 저장 대신 그 칸으로 이동.
@@ -153,7 +184,7 @@ export default function InboundManage({ transactions }) {
       let found = finalizeCode(form.itemCode)
       if (!found && suggestions[sugIdx]) { pickSuggestion(suggestions[sugIdx].code); return }
       if (!found) { codeRef.current?.focus(); return }
-      if (!form.quantity || Number(form.quantity) <= 0) { setTimeout(() => qtyRef.current?.focus(), 0); return }
+      if (!form.quantity || Number(form.quantity) <= 0) { focusQty(); return }
       handleSave(found.code)
       return
     }
@@ -217,7 +248,7 @@ export default function InboundManage({ transactions }) {
               <ItemLookup
                 open={lookupOpen}
                 onOpenChange={setLookup}
-                onSelect={code => { setF('itemCode', code); setTimeout(()=>qtyRef.current?.focus(),0) }} />
+                onSelect={code => { setF('itemCode', code); focusQty() }} />
               {item && <span style={{color:'#16a34a', fontWeight:700, fontSize:11}}>→ {item.name}</span>}
               {form.itemCode && !item && <span style={{color:'#dc2626', fontSize:11}}>→ 없는 코드</span>}
             </label>
@@ -225,7 +256,7 @@ export default function InboundManage({ transactions }) {
               <input ref={codeRef} type="text" value={form.itemCode}
                 onChange={e => setF('itemCode', e.target.value.toUpperCase())}
                 onKeyDown={onCodeKeyDown}
-                onBlur={() => finalizeCode(form.itemCode)}
+                onBlur={finalizeCodeFromState}
                 placeholder="18 또는 A18"
                 autoComplete="off"
                 style={{...S.inp, width:150, borderColor: item?'#16a34a': form.itemCode?'#dc2626':'#e2e8f0'}} />
@@ -268,17 +299,18 @@ export default function InboundManage({ transactions }) {
           {/* 저장 */}
           <div style={{...S.field, justifyContent:'flex-end'}}>
             <label style={{...S.label, opacity:0}}>·</label>
-            <button onClick={() => handleSave()} disabled={!isReady||saving}
+            <button onClick={() => handleSave()} disabled={!isReady}
               style={{...S.saveBtn,
                 background: saved?'#16a34a': isReady?'#1e40af':'#cbd5e1',
                 cursor: isReady?'pointer':'not-allowed'}}>
-              {saved?'✓ 저장됨': saving?'저장 중':'저장  ↵'}
+              {saved?'✓ 저장됨':'저장  ↵'}
             </button>
           </div>
         </div>
 
         {/* 힌트 */}
         <div style={S.hintBar}>
+          {pending > 0 && <span style={{color:'#94a3b8', marginRight:8}}>· 서버 저장 {pending}건 진행 중</span>}
           {err ? (
             <span style={{color:'#dc2626', fontWeight:700}}>{err}</span>
           ) : item ? (
