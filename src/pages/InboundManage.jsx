@@ -68,8 +68,8 @@ export default function InboundManage({ transactions }) {
     ? ITEMS.filter(i => i.code.startsWith(form.itemCode.trim().toUpperCase())).slice(0, 6)
     : []
 
-  // 진입 시 품목코드에 포커스 (날짜는 오늘로 채워져 있음)
-  useEffect(() => { codeRef.current?.focus() }, [])
+  // 진입 시 날짜에 포커스 (오늘 날짜가 채워져 있음)
+  useEffect(() => { focusDate() }, [])
   useEffect(() => { setSugIdx(0) }, [form.itemCode])
 
   // 품목코드 정규화: 숫자만 입력하면 A 자동 추가
@@ -111,6 +111,12 @@ export default function InboundManage({ transactions }) {
   }
   const focusCode = () => focusNow(codeRef)
   const focusQty  = () => focusNow(qtyRef)
+  // 날짜는 포커스와 함께 전체 선택 — 바로 다른 날짜를 타이핑해 덮어쓸 수 있게
+  const focusDate = () => {
+    const go = () => { dateRef.current?.focus(); dateRef.current?.select() }
+    go()
+    requestAnimationFrame(go)
+  }
 
   // 저장은 네트워크를 기다리지 않는다 — 입력칸을 바로 비우고 포커스를 되돌려
   // 다음 건을 곧바로 입력할 수 있게 하고, 실제 쓰기는 뒤에서 진행한다.
@@ -133,7 +139,7 @@ export default function InboundManage({ transactions }) {
     setForm({ date:dateVal, itemCode:'', quantity:'', memo:'' })
     setSaved(true)
     setTimeout(() => setSaved(false), 1200)
-    focusCode()
+    focusDate()
 
     // 2) 실제 저장은 뒤에서
     setPending(n => n + 1)
@@ -147,7 +153,7 @@ export default function InboundManage({ transactions }) {
         // 실패하면 입력값을 되돌려 다시 저장할 수 있게
         setErr(`저장 실패 (${found.code} ${payload.quantity}EA) — 입력값을 복구했습니다: ${e.message}`)
         setForm(snapshot)
-        focusCode()
+        focusDate()
       } finally {
         setPending(n => Math.max(0, n - 1))
       }
@@ -327,7 +333,7 @@ export default function InboundManage({ transactions }) {
             <span style={{color:'#94a3b8'}}>
               <b style={{color:'#64748b'}}>Tab</b> 다음 칸 · <b style={{color:'#64748b'}}>Enter</b> 저장 ·
               <b style={{color:'#64748b'}}> ↑↓</b> 코드 선택 / 날짜 증감 · <b style={{color:'#64748b'}}>F2</b> 품목조회 ·
-              저장하면 날짜는 유지되고 코드 칸으로 돌아갑니다
+              저장하면 날짜 칸으로 돌아갑니다 (날짜는 그대로 유지)
             </span>
           )}
         </div>

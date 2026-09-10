@@ -39,7 +39,7 @@ export default function ItemLookup({ onSelect, open: openProp, onOpenChange, hid
   return (
     <>
       {!hideButton && (
-        <button type="button" onClick={() => setOpen(true)} title="품목 조회 (F2)"
+        <button type="button" tabIndex={-1} onClick={() => setOpen(true)} title="품목 조회 (F2)"
           style={{padding:'5px 8px',background:'#f1f5f9',border:'1px solid #d1d5db',borderRadius:5,
             cursor:'pointer',fontSize:12,color:'#475569',fontFamily:'inherit',whiteSpace:'nowrap',flexShrink:0}}>
           📋 품목 <span style={{color:'#94a3b8',fontWeight:700}}>F2</span>
