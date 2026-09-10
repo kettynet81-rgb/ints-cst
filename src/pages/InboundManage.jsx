@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react'
-import { collection, addDoc, deleteDoc, doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore'
+import { useState, useRef, useEffect } from 'react'
+import { collection, addDoc, deleteDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { writeLog } from '../utils/logger'
 import { db } from '../firebase'
 import { useAuth } from '../contexts/AuthContext'
@@ -7,11 +7,17 @@ import { ITEMS } from '../data/items'
 import ItemLookup from '../components/ItemLookup'
 
 const ITEM_MAP = Object.fromEntries(ITEMS.map(i => [i.code, i.name]))
-const today    = () => new Date().toISOString().slice(0,10)
+
+// 로컬 기준 오늘 (toISOString은 UTC라 밤에 하루 밀림)
+const today = () => {
+  const d = new Date()
+  const p = n => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
 
 const parseDate = (v) => {
   const year = new Date().getFullYear()
-  v = v.trim().replace(/\./g, '/')
+  v = (v || '').trim().replace(/\./g, '/')
   const slash = v.match(/^(\d{1,2})\/(\d{1,2})$/)
   if (slash) return `${year}-${slash[1].padStart(2,'0')}-${slash[2].padStart(2,'0')}`
   const mmdd = v.match(/^(\d{2})(\d{2})$/)
@@ -20,19 +26,32 @@ const parseDate = (v) => {
   return v
 }
 
+// 날짜 ±n일 (getFullYear/Month/Date 사용)
+const shiftDate = (v, n) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(parseDate(v))
+  if (!m) return v
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]) + n)
+  const p = x => String(x).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
+
 export default function InboundManage({ transactions }) {
   const inbounds = transactions
     .filter(t => t.type === '입고')
     .sort((a,b) => b.date.localeCompare(a.date) || (b.createdAt?.seconds||0)-(a.createdAt?.seconds||0))
 
-  const [form, setForm]     = useState({ date:'', itemCode:'', quantity:'', memo:'' })
+  const [form, setForm]     = useState({ date: today(), itemCode:'', quantity:'', memo:'' })
   const [saving, setSaving] = useState(false)
   const [saved,  setSaved]  = useState(false)
+  const [err,    setErr]    = useState('')
   const { userData } = useAuth()
 
   const [editId, setEditId] = useState(null)
   const [editData, setEditData] = useState({})
   const [deleting, setDel]  = useState(null)
+
+  const [sugIdx, setSugIdx]   = useState(0)
+  const [lookupOpen, setLookup] = useState(false)
 
   const dateRef = useRef(null)
   const codeRef = useRef(null)
@@ -41,38 +60,119 @@ export default function InboundManage({ transactions }) {
 
   const setF = (k, v) => setForm(f => ({...f, [k]:v}))
 
-  const codeUpper = form.itemCode.trim().toUpperCase()
-  const foundItem = ITEMS.find(i => i.code === codeUpper)
+  const item = ITEMS.find(i => i.code === form.itemCode.trim().toUpperCase())
+  const isReady = form.date && item && form.quantity && Number(form.quantity) > 0
 
-  // 품목코드 확정: 숫자만 입력 시 A 자동 추가
-  const finalizeCode = (v, goNext=false) => {
-    let val = v.trim().toUpperCase()
+  // 자동완성 목록 (정확히 일치하면 표시하지 않음)
+  const suggestions = (!item && form.itemCode.trim())
+    ? ITEMS.filter(i => i.code.startsWith(form.itemCode.trim().toUpperCase())).slice(0, 6)
+    : []
+
+  // 진입 시 품목코드에 포커스 (날짜는 오늘로 채워져 있음)
+  useEffect(() => { codeRef.current?.focus() }, [])
+  useEffect(() => { setSugIdx(0) }, [form.itemCode])
+
+  // 품목코드 확정: 숫자만 입력하면 A 자동 추가
+  const finalizeCode = (v) => {
+    let val = (v || '').trim().toUpperCase()
     if (/^\d+$/.test(val)) val = 'A' + val
     setF('itemCode', val)
-    if (ITEMS.find(i => i.code === val) && goNext) setTimeout(() => qtyRef.current?.focus(), 50)
+    return ITEMS.find(i => i.code === val) || null
   }
 
-  const handleSave = async () => {
-    const item = ITEMS.find(i => i.code === form.itemCode.trim().toUpperCase())
-    if (!form.date || !item || !form.quantity || Number(form.quantity) <= 0) return
-    setSaving(true)
-    await addDoc(collection(db, 'transactions'), {
-      type:'입고', date:form.date,
-      itemCode:item.code, itemName:item.name,
-      quantity:Number(form.quantity), memo:form.memo.trim(),
-      createdAt:serverTimestamp(),
-    })
-    await writeLog({ action:'입력', target:'입고기록', docId:'', after:{ date:form.date, itemCode:item.code, itemName:item.name, quantity:Number(form.quantity), memo:form.memo }, user: userData?.name||'알수없음' })
-    setForm({ date:'', itemCode:'', quantity:'', memo:'' })
-    setSaving(false); setSaved(true)
-    setTimeout(() => { setSaved(false); codeRef.current?.focus() }, 1500)
+  const pickSuggestion = (code) => {
+    setF('itemCode', code)
+    setTimeout(() => qtyRef.current?.focus(), 0)
+  }
+
+  // 빈 칸이 있으면 저장 대신 그 칸으로 이동 (Enter 하나로 이동+저장)
+  const focusMissing = () => {
+    if (!form.date) { dateRef.current?.focus(); return true }
+    if (!item)      { codeRef.current?.focus(); return true }
+    if (!form.quantity || Number(form.quantity) <= 0) { qtyRef.current?.focus(); return true }
+    return false
+  }
+
+  const handleSave = async (codeOverride) => {
+    const code = (codeOverride || form.itemCode).trim().toUpperCase()
+    const found = ITEMS.find(i => i.code === code)
+    const dateVal = parseDate(form.date)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateVal)) { setErr('날짜 형식을 확인하세요 (예: 7/5, 0705)'); dateRef.current?.focus(); return }
+    if (!found || !form.quantity || Number(form.quantity) <= 0) return
+
+    setErr(''); setSaving(true)
+    try {
+      await addDoc(collection(db, 'transactions'), {
+        type:'입고', date:dateVal,
+        itemCode:found.code, itemName:found.name,
+        quantity:Number(form.quantity), memo:form.memo.trim(),
+        createdAt:serverTimestamp(),
+      })
+      await writeLog({ action:'입력', target:'입고기록', docId:'',
+        after:{ date:dateVal, itemCode:found.code, itemName:found.name, quantity:Number(form.quantity), memo:form.memo },
+        user: userData?.name||'알수없음' })
+      // 날짜는 유지 — 같은 날짜로 연속 입력하는 흐름
+      setForm({ date:dateVal, itemCode:'', quantity:'', memo:'' })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 1200)
+    } catch (e) {
+      setErr('저장 실패: ' + e.message)
+    } finally {
+      setSaving(false)
+      setTimeout(() => codeRef.current?.focus(), 0)
+    }
+  }
+
+  // Enter = 저장. 빈 칸이 남아 있으면 저장 대신 그 칸으로 이동.
+  const enterToSave = (e) => {
+    if (e.key !== 'Enter' || e.nativeEvent.isComposing) return
+    e.preventDefault()
+    if (focusMissing()) return
+    handleSave()
+  }
+
+  const onDateKeyDown = (e) => {
+    if (e.key === 'ArrowUp')   { e.preventDefault(); setF('date', shiftDate(form.date,  1)); return }
+    if (e.key === 'ArrowDown') { e.preventDefault(); setF('date', shiftDate(form.date, -1)); return }
+    if (e.key === 'Enter') { setF('date', parseDate(form.date)) }
+    enterToSave(e)
+  }
+
+  const onCodeKeyDown = (e) => {
+    if (e.key === 'F2') { e.preventDefault(); setLookup(true); return }
+    if (e.key === 'Escape') { e.preventDefault(); setF('itemCode', ''); return }
+
+    if (suggestions.length) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); setSugIdx(i => Math.min(i + 1, suggestions.length - 1)); return }
+      if (e.key === 'ArrowUp')   { e.preventDefault(); setSugIdx(i => Math.max(i - 1, 0)); return }
+    }
+
+    // Enter: 코드 확정 → 수량 비었으면 수량으로, 다 찼으면 저장
+    if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+      e.preventDefault()
+      let found = finalizeCode(form.itemCode)
+      if (!found && suggestions[sugIdx]) { pickSuggestion(suggestions[sugIdx].code); return }
+      if (!found) { codeRef.current?.focus(); return }
+      if (!form.quantity || Number(form.quantity) <= 0) { setTimeout(() => qtyRef.current?.focus(), 0); return }
+      handleSave(found.code)
+      return
+    }
+
+    // Tab: 코드 확정 후 다음 칸으로 (목록에서 고른 항목이 있으면 그걸로)
+    if (e.key === 'Tab' && !e.shiftKey) {
+      const found = finalizeCode(form.itemCode)
+      if (!found && suggestions[sugIdx]) { e.preventDefault(); pickSuggestion(suggestions[sugIdx].code) }
+      return
+    }
   }
 
   const saveEdit = async () => {
     const before = inbounds.find(t => t.id === editId)
-    const after = { date:editData.date, itemCode:editData.itemCode, itemName:ITEM_MAP[editData.itemCode]||'', quantity:Number(editData.quantity), memo:editData.memo }
+    const after = { date:parseDate(editData.date), itemCode:editData.itemCode, itemName:ITEM_MAP[editData.itemCode]||'', quantity:Number(editData.quantity), memo:editData.memo }
     await updateDoc(doc(db, 'transactions', editId), after)
-    await writeLog({ action:'수정', target:'입고기록', docId:editId, before:{ date:before?.date, itemCode:before?.itemCode, quantity:before?.quantity, memo:before?.memo||'' }, after, user:userData?.name||'알수없음' })
+    await writeLog({ action:'수정', target:'입고기록', docId:editId,
+      before:{ date:before?.date, itemCode:before?.itemCode, quantity:before?.quantity, memo:before?.memo||'' },
+      after, user:userData?.name||'알수없음' })
     setEditId(null)
   }
 
@@ -80,13 +180,16 @@ export default function InboundManage({ transactions }) {
     if (!window.confirm('삭제하시겠습니까?')) return
     const target = inbounds.find(t => t.id === id)
     setDel(id)
-    await writeLog({ action:'삭제', target:'입고기록', docId:id, before:{ date:target?.date, itemCode:target?.itemCode, quantity:target?.quantity }, user:userData?.name||'알수없음' })
+    await writeLog({ action:'삭제', target:'입고기록', docId:id,
+      before:{ date:target?.date, itemCode:target?.itemCode, quantity:target?.quantity }, user:userData?.name||'알수없음' })
     await deleteDoc(doc(db,'transactions',id))
     setDel(null)
   }
 
-  const item = ITEMS.find(i => i.code === form.itemCode.trim().toUpperCase())
-  const isReady = form.date && item && form.quantity && Number(form.quantity) > 0
+  const onEditKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); saveEdit() }
+    if (e.key === 'Escape') { e.preventDefault(); setEditId(null) }
+  }
 
   return (
     <div style={S.wrap}>
@@ -98,11 +201,11 @@ export default function InboundManage({ transactions }) {
 
           {/* 날짜 */}
           <div style={S.field}>
-            <label style={S.label}>날짜</label>
+            <label style={S.label}>날짜 <span style={S.keyHint}>↑↓</span></label>
             <input ref={dateRef} type="text" value={form.date}
               onChange={e => setF('date', e.target.value)}
               onBlur={e => setF('date', parseDate(e.target.value))}
-              onKeyDown={e => e.key==='Enter' && (setF('date', parseDate(form.date)), codeRef.current?.focus())}
+              onKeyDown={onDateKeyDown}
               placeholder="7/5 또는 0705"
               style={{...S.inp, width:130}} />
           </div>
@@ -111,22 +214,28 @@ export default function InboundManage({ transactions }) {
           <div style={{...S.field, flex:1}}>
             <label style={{...S.label, display:'flex', alignItems:'center', gap:8}}>
               <span>품목코드</span>
-              <ItemLookup onSelect={code=>{setF('itemCode',code); setTimeout(()=>qtyRef.current?.focus(),50)}}/>
+              <ItemLookup
+                open={lookupOpen}
+                onOpenChange={setLookup}
+                onSelect={code => { setF('itemCode', code); setTimeout(()=>qtyRef.current?.focus(),0) }} />
               {item && <span style={{color:'#16a34a', fontWeight:700, fontSize:11}}>→ {item.name}</span>}
               {form.itemCode && !item && <span style={{color:'#dc2626', fontSize:11}}>→ 없는 코드</span>}
             </label>
             <div style={{position:'relative'}}>
               <input ref={codeRef} type="text" value={form.itemCode}
                 onChange={e => setF('itemCode', e.target.value.toUpperCase())}
-                onKeyDown={e => { if(e.key==='Enter'||e.key==='Tab'){e.preventDefault(); finalizeCode(form.itemCode, true)} }}
-                onBlur={() => finalizeCode(form.itemCode, false)}
+                onKeyDown={onCodeKeyDown}
+                onBlur={() => finalizeCode(form.itemCode)}
                 placeholder="18 또는 A18"
+                autoComplete="off"
                 style={{...S.inp, width:150, borderColor: item?'#16a34a': form.itemCode?'#dc2626':'#e2e8f0'}} />
-              {form.itemCode && !item && (
+              {suggestions.length > 0 && (
                 <div style={S.suggest}>
-                  {ITEMS.filter(i => i.code.startsWith(form.itemCode.toUpperCase())).slice(0,6).map(i => (
-                    <div key={i.code} style={S.suggestItem}
-                      onMouseDown={() => { setF('itemCode', i.code); setTimeout(()=>qtyRef.current?.focus(),50) }}>
+                  {suggestions.map((i, n) => (
+                    <div key={i.code}
+                      style={{...S.suggestItem, background: n === sugIdx ? '#dbeafe' : '#fff'}}
+                      onMouseEnter={() => setSugIdx(n)}
+                      onMouseDown={e => { e.preventDefault(); pickSuggestion(i.code) }}>
                       <span style={{fontWeight:700, color:'#1e40af', marginRight:8, width:36}}>{i.code}</span>
                       <span style={{fontSize:12, color:'#64748b'}}>{i.name}</span>
                     </div>
@@ -141,25 +250,25 @@ export default function InboundManage({ transactions }) {
             <label style={S.label}>수량 (EA)</label>
             <input ref={qtyRef} type="number" min="1" value={form.quantity}
               onChange={e => setF('quantity', e.target.value)}
-              onKeyDown={e => e.key==='Enter' && memoRef.current?.focus()}
+              onKeyDown={enterToSave}
               placeholder="0"
               style={{...S.inp, width:100, textAlign:'right', fontWeight:700, fontSize:15}} />
           </div>
 
           {/* 메모 */}
           <div style={{...S.field, flex:2}}>
-            <label style={S.label}>메모</label>
+            <label style={S.label}>메모 <span style={S.keyHint}>선택</span></label>
             <input ref={memoRef} type="text" value={form.memo}
               onChange={e => setF('memo', e.target.value)}
-              onKeyDown={e => e.key==='Enter' && handleSave()}
-              placeholder="메모 입력"
+              onKeyDown={enterToSave}
+              placeholder="메모 입력 (생략 가능)"
               style={{...S.inp, flex:1}} />
           </div>
 
           {/* 저장 */}
           <div style={{...S.field, justifyContent:'flex-end'}}>
             <label style={{...S.label, opacity:0}}>·</label>
-            <button onClick={handleSave} disabled={!isReady||saving}
+            <button onClick={() => handleSave()} disabled={!isReady||saving}
               style={{...S.saveBtn,
                 background: saved?'#16a34a': isReady?'#1e40af':'#cbd5e1',
                 cursor: isReady?'pointer':'not-allowed'}}>
@@ -170,7 +279,9 @@ export default function InboundManage({ transactions }) {
 
         {/* 힌트 */}
         <div style={S.hintBar}>
-          {item ? (
+          {err ? (
+            <span style={{color:'#dc2626', fontWeight:700}}>{err}</span>
+          ) : item ? (
             <span>
               <span style={{color:'#94a3b8'}}>1SET 필요수량</span>
               <strong style={{color:'#1e40af', margin:'0 6px'}}>{item.needPerSet} EA</strong>
@@ -181,7 +292,11 @@ export default function InboundManage({ transactions }) {
               )}
             </span>
           ) : (
-            <span style={{color:'#cbd5e1'}}>날짜 → 품목코드(숫자만 입력 가능) → 수량 → 메모 → Enter</span>
+            <span style={{color:'#94a3b8'}}>
+              <b style={{color:'#64748b'}}>Tab</b> 다음 칸 · <b style={{color:'#64748b'}}>Enter</b> 저장 ·
+              <b style={{color:'#64748b'}}> ↑↓</b> 코드 선택 / 날짜 증감 · <b style={{color:'#64748b'}}>F2</b> 품목조회 ·
+              저장하면 날짜는 유지되고 코드 칸으로 돌아갑니다
+            </span>
           )}
         </div>
       </div>
@@ -190,7 +305,7 @@ export default function InboundManage({ transactions }) {
       <div style={S.card}>
         <div style={S.cardHead}>
           <span style={S.cardTitle}>입고 기록</span>
-          <span style={S.cardSub}>총 {inbounds.length}건 · 행 클릭하면 수정</span>
+          <span style={S.cardSub}>총 {inbounds.length}건 · 행 클릭하면 수정 (Enter 저장 · Esc 취소)</span>
         </div>
         <div style={{...S.tableWrap, }}>
           <table style={{...S.table, tableLayout:'fixed'}}>
@@ -217,19 +332,19 @@ export default function InboundManage({ transactions }) {
                     style={{background:isEdit?'#eff6ff':i%2===0?'#f8fafc':'#fff', cursor:isEdit?'default':'pointer'}}
                     onClick={() => !isEdit && (setEditId(tx.id), setEditData({date:tx.date,itemCode:tx.itemCode,quantity:tx.quantity,memo:tx.memo||''}))}>
                     <td style={{...S.td,fontSize:12,color:'#475569'}}>
-                      {isEdit ? <input type="text" value={editData.date} onChange={e=>setEditData({...editData,date:e.target.value})} style={S.tdInp}/> : tx.date}
+                      {isEdit ? <input autoFocus type="text" value={editData.date} onKeyDown={onEditKeyDown} onChange={e=>setEditData({...editData,date:e.target.value})} style={S.tdInp}/> : tx.date}
                     </td>
                     <td style={S.td}>
-                      {isEdit ? <input type="text" value={editData.itemCode} onChange={e=>setEditData({...editData,itemCode:e.target.value.toUpperCase()})} style={{...S.tdInp,width:60}}/> : <span style={S.codeTag}>{tx.itemCode}</span>}
+                      {isEdit ? <input type="text" value={editData.itemCode} onKeyDown={onEditKeyDown} onChange={e=>setEditData({...editData,itemCode:e.target.value.toUpperCase()})} style={{...S.tdInp,width:60}}/> : <span style={S.codeTag}>{tx.itemCode}</span>}
                     </td>
                     <td style={{...S.td,fontSize:12,color:'#374151'}}>
                       {isEdit ? ITEM_MAP[editData.itemCode]||'—' : tx.itemName}
                     </td>
                     <td style={{...S.td,textAlign:'right'}}>
-                      {isEdit ? <input type="number" value={editData.quantity} onChange={e=>setEditData({...editData,quantity:e.target.value})} style={{...S.tdInp,textAlign:'right',width:80}}/> : <span style={{fontWeight:700}}>{tx.quantity.toLocaleString()}</span>}
+                      {isEdit ? <input type="number" value={editData.quantity} onKeyDown={onEditKeyDown} onChange={e=>setEditData({...editData,quantity:e.target.value})} style={{...S.tdInp,textAlign:'right',width:80}}/> : <span style={{fontWeight:700}}>{tx.quantity.toLocaleString()}</span>}
                     </td>
                     <td style={{...S.td,fontSize:12,color:'#64748b'}}>
-                      {isEdit ? <input type="text" value={editData.memo} onChange={e=>setEditData({...editData,memo:e.target.value})} style={S.tdInp}/> : tx.memo||''}
+                      {isEdit ? <input type="text" value={editData.memo} onKeyDown={onEditKeyDown} onChange={e=>setEditData({...editData,memo:e.target.value})} style={S.tdInp}/> : tx.memo||''}
                     </td>
                     <td style={S.td} onClick={e=>e.stopPropagation()}>
                       {isEdit ? (
@@ -259,10 +374,11 @@ const S = {
   inputRow:  {display:'flex',gap:10,alignItems:'flex-end',flexWrap:'wrap'},
   field:     {display:'flex',flexDirection:'column',gap:4},
   label:     {fontSize:11,fontWeight:600,color:'#64748b',letterSpacing:0.3},
+  keyHint:   {fontSize:10,color:'#cbd5e1',fontWeight:700,marginLeft:2},
   inp:       {padding:'8px 11px',border:'1.5px solid #e2e8f0',borderRadius:7,fontSize:13,fontFamily:'inherit',outline:'none',color:'#1e293b'},
   saveBtn:   {padding:'9px 20px',color:'#fff',border:'none',borderRadius:7,fontSize:13,fontWeight:700,fontFamily:'inherit',whiteSpace:'nowrap'},
   hintBar:   {marginTop:8,fontSize:12,color:'#64748b',minHeight:16},
-  suggest:     {position:'absolute',top:'100%',left:0,zIndex:200,background:'#fff',border:'1px solid #e2e8f0',borderRadius:8,boxShadow:'0 4px 16px rgba(0,0,0,0.1)',minWidth:300,marginTop:4},
+  suggest:     {position:'absolute',top:'100%',left:0,zIndex:200,background:'#fff',border:'1px solid #e2e8f0',borderRadius:8,boxShadow:'0 4px 16px rgba(0,0,0,0.1)',minWidth:300,marginTop:4,overflow:'hidden'},
   suggestItem: {padding:'8px 14px',cursor:'pointer',fontSize:13,display:'flex',alignItems:'center'},
   card:      {background:'#fff',borderRadius:10,border:'1px solid #e2e8f0',display:'flex',flexDirection:'column',flex:1,minHeight:0,overflow:'hidden'},
   cardHead:  {padding:'10px 16px',borderBottom:'1px solid #f1f5f9',display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0},
